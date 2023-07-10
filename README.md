@@ -7,7 +7,7 @@ Before clicking the button, highlight the cells containing the values you want t
 
 After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
-[image](./img/dialog.jpg)
+![image](./img/dialog.jpg)
 
 Below is an explanation of the fields in this dialog:
 
