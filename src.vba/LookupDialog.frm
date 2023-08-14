@@ -1,3 +1,12 @@
+Private Sub AdditionalFieldsButton_Click()
+    Catalog.aExplainFields = Catalog.GetAllFields()
+    AdditionalFieldsDialog.FilterBox.Value = ""
+    If Not IsNull(aFieldMap) Then
+        AdditionalFieldsDialog.SRUFields.List = aExplainFields
+        AdditionalFieldsDialog.Show
+    End If
+End Sub
+
 Private Sub AddResultButton_Click()
     With LookupDialog
         If ResultTypeCombo.Value <> "" Then
@@ -10,8 +19,74 @@ Private Sub AddResultButton_Click()
     End With
 End Sub
 
+Private Sub AddURLButton_Click()
+    aFieldMap = Catalog.GetAllFields()
+    If Not IsNull(aFieldMap) Then
+        Catalog.SetRegistryURLsFromCombo
+    End If
+End Sub
+
 Private Sub CancelButton_Click()
     LookupDialog.Hide
+End Sub
+
+Private Sub DeleteSetButton_Click()
+    If LookupDialog.FieldSetList.ListIndex < 0 Then
+        MsgBox ("Please select a set name")
+        Exit Sub
+    End If
+    sSelectedSet = LookupDialog.FieldSetList.Value
+    sSelectedIndex = LookupDialog.FieldSetList.ListIndex
+    LookupDialog.FieldSetList.RemoveItem sSelectedIndex
+    sFieldSets = Catalog.GetFieldSets()
+    aFieldSets = Split(sFieldSets, "|")
+    sNewSets = ""
+    For i = 0 To UBound(aFieldSets)
+        If InStr(1, aFieldSets(i), sSelectedSet + "¦") = 0 Then
+            If i > 0 Then
+                sNewSets = sNewSets & "|"
+            End If
+            sNewSets = sNewSets & aFieldSets(i)
+        End If
+    Next i
+    Catalog.SetFieldSets (sNewSets)
+    LookupDialog.FieldSetList.ListIndex = -1
+    Catalog.RedrawButtons
+End Sub
+
+Private Sub FieldSetList_Change()
+    RedrawButtons
+End Sub
+
+Private Sub FieldSetList_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    If LookupDialog.FieldSetList.ListIndex > -1 Then
+        sSelectedSet = LookupDialog.FieldSetList.Value
+        bSuccess = LoadSet(CStr(sSelectedSet))
+    End If
+End Sub
+
+Private Function LoadSet(sSetName As String) As Boolean
+    LookupDialog.ResultTypeList.Clear
+    sFieldSets = Catalog.GetFieldSets()
+    aFieldSets = Split(sFieldSets, "|")
+    For i = 0 To UBound(aFieldSets)
+        If InStr(1, aFieldSets(i), sSetName & "¦") > 0 Then
+            aFields = Split(aFieldSets(i), "¦")
+            For j = 1 To UBound(aFields)
+                LookupDialog.ResultTypeList.AddItem aFields(j)
+            Next j
+        End If
+    Next i
+End Function
+
+Private Sub LoadSetButton_Click()
+    If LookupDialog.FieldSetList.ListIndex < 0 Then
+        MsgBox ("Please select a set name")
+        Exit Sub
+    End If
+    sSelectedSet = LookupDialog.FieldSetList.Value
+    bSuccess = LoadSet(CStr(sSelectedSet))
+    
 End Sub
 
 Private Sub MoveDownButton_Click()
@@ -38,19 +113,31 @@ Private Sub MoveUpButton_Click()
     End With
 End Sub
 
+Private Sub NewSetButton_Click()
+    sNewName = InputBox("Enter the Name of the New Set", "New Set")
+    If sNewName = "" Then
+        Exit Sub
+    End If
+    If InStr(1, sNewName, "|") > 0 Or InStr(1, sNewName, Chr(166)) Then
+        MsgBox ("Set name cannot contain vertical bar characters")
+        Exit Sub
+    End If
+    bSuccess = SaveSet(CStr(sNewName))
+    If bSuccess Then
+        LookupDialog.FieldSetList.AddItem sNewName
+    End If
+    LookupDialog.FieldSetList.ListIndex = LookupDialog.FieldSetList.ListCount - 1
+End Sub
+
 Private Sub OKButton_Click()
-    
+    aFieldMap = Catalog.GetAllFields()
+    If IsNull(aFieldMap) Then
+        Exit Sub
+    End If
     
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
-    
-    If sCatalogURL = "" Then
-        MsgBox ("Please enter a URL for the catalog (e.g. 'https://catalog.princeton.edu')")
-        Exit Sub
-    Else
-        CreateObject("WScript.Shell").RegWrite "HKCU\Software\Excel Local Catalog Lookup\CatalogURL", sCatalogURL, "REG_SZ"
-    End If
-
+    Catalog.SetRegistryURLsFromCombo
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
         AddResultButton_Click
@@ -79,10 +166,15 @@ Private Sub OKButton_Click()
             Dim sSearchString As String
             sSearchString = Cells(i, iSourceColumn).Value
             If sSearchString <> "" Then
-                sResultRec = Catalog.Lookup(sSearchString, sCatalogURL)
+                If sSearchString = "FALSE" Then
+                    sResultRec = ""
+                Else
+                    sResultRec = Catalog.Lookup(sSearchString, sCatalogURL)
+                End If
                 For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
                     Dim sType As String
                     sType = LookupDialog.ResultTypeList.List(j)
+                    sType = Replace(sType, "*", "")
                     If sType = "MMS ID" Then
                         sType = "001"
                     ElseIf sType = "ISBN" Then
@@ -91,7 +183,7 @@ Private Sub OKButton_Click()
                         sType = "245"
                     ElseIf sType = "Call No." Then
                         sType = "AVA$d"
-                    ElseIf sType = "Location(s)" Then
+                    ElseIf sType = "Location/DB Name" Then
                         sType = "AVA$bj|AVE$lm"
                     ElseIf sType = "Language code" Then
                         sType = "008(35,3)"
@@ -102,13 +194,16 @@ Private Sub OKButton_Click()
                     ElseIf sType = "True/False" Then
                         sType = "exists"
                     End If
-                    sResult = ExtractField(sType, CStr(sResultRec))
-                    sResult = Trim(sResult)
-                    iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
-                        (Len(sSearchString) - Len(Replace(sSearchString, "|", "")))
-                    'Debug.Print iExtraBars & " " & sSearchString & " " & sResult
-                    If Right(sResult, 1) = "|" And iExtraBars <> 0 Then
-                        sResult = Left(sResult, Len(sResult) - 1)
+                    If sResultRec = "" Then
+                        sResult = ""
+                    Else
+                        sResult = ExtractField(sType, CStr(sResultRec))
+                        sResult = Trim(sResult)
+                        iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
+                            (Len(sSearchString) - Len(Replace(sSearchString, "|", "")))
+                        If Right(sResult, 1) = "|" And iExtraBars <> 0 Then
+                            sResult = Left(sResult, Len(sResult) - 1)
+                        End If
                     End If
                     If sResult = "" Then
                         sResult = False
@@ -146,13 +241,25 @@ Private Sub RemoveResultButton_Click()
     RedrawButtons
 End Sub
 
-Private Sub ResultColumnSpinner_Change()
-    LookupDialog.ResultColumnInput.Value = Catalog.ColumnLetterConvert(LookupDialog.ResultColumnSpinner.Value)
+Private Sub RemoveURLButton_Click()
+    If LookupDialog.CatalogURLBox.ListCount < 2 Then
+        MsgBox ("Please add another URL before removing the last one")
+        Exit Sub
+    End If
+    
+    sCatalogURL = LookupDialog.CatalogURLBox.Value
+    For i = 0 To LookupDialog.CatalogURLBox.ListCount - 1
+        If sCatalogURL = LookupDialog.CatalogURLBox.List(i) Then
+            LookupDialog.CatalogURLBox.RemoveItem (i)
+            LookupDialog.CatalogURLBox.ListIndex = 0
+            Exit For
+        End If
+    Next i
+    Catalog.SetRegistryURLsFromCombo
 End Sub
 
-
-Private Sub ResultsGroup_Click()
-
+Private Sub ResultColumnSpinner_Change()
+    LookupDialog.ResultColumnInput.Value = Catalog.ColumnLetterConvert(LookupDialog.ResultColumnSpinner.Value)
 End Sub
 
 Private Sub ResultTypeCombo_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
@@ -164,4 +271,48 @@ End Sub
 
 Private Sub ResultTypeList_Change()
     RedrawButtons
+End Sub
+
+Function SaveSet(sSetName As String) As Boolean
+    If LookupDialog.ResultTypeList.ListCount = 0 Then
+        MsgBox ("Please add at least one result type to the set")
+        SaveSet = False
+        Exit Function
+    End If
+    sSetString = sSetName
+    For i = 0 To LookupDialog.ResultTypeList.ListCount - 1
+        sSetString = sSetString & "¦" & LookupDialog.ResultTypeList.List(i)
+    Next i
+    
+    sAllSets = Catalog.GetFieldSets()
+    aAllSets = Split(sAllSets, "|")
+    sNewSets = ""
+    bSetFound = False
+    For i = 0 To UBound(aAllSets)
+        If i > 0 Then
+                sNewSets = sNewSets & "|"
+        End If
+        If InStr(1, aAllSets(i), sSetName + "¦") > 0 Then
+            sNewSets = sNewSets & sSetString
+            bSetFound = True
+        Else
+            sNewSets = sNewSets & aAllSets(i)
+        End If
+    Next i
+    If Not bSetFound Then
+        If sNewSets <> "" Then
+            sNewSets = sNewSets & "|"
+        End If
+        sNewSets = sNewSets & sSetString
+    End If
+    Catalog.SetFieldSets (sNewSets)
+    SaveSet = True
+End Function
+
+Private Sub SaveSetButton_Click()
+    If LookupDialog.FieldSetList.ListIndex < 0 Then
+        MsgBox ("Please select a set name")
+        Exit Sub
+    End If
+    bSuccess = SaveSet(LookupDialog.FieldSetList.Value)
 End Sub

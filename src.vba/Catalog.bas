@@ -1,6 +1,9 @@
 Global oRegEx As Object
 Global oXMLHTTP As Object
 Global oXMLDOM As Object
+Global oRegistry As Object
+Global sRegString As String
+Global aExplainFields As Variant
 
 'Initialize global objects
 Private Sub Initialize()
@@ -12,10 +15,11 @@ Private Sub Initialize()
         .IgnoreCase = True
     End With
     
+    Set oRegistry = CreateObject("WScript.Shell")
+    sRegString = "HKCU\Software\Excel Local Catalog Lookup\"
     Set oXMLHTTP = CreateObject("MSXML2.XMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
     oXMLDOM.SetProperty "SelectionLanguage", "XPath"
-    oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:marc='http://www.loc.gov/MARC21/slim'"
     Exit Sub
 ErrHandler:
     MsgBox ("There was an error connecting to the catalog.  Please try again.")
@@ -43,18 +47,86 @@ Sub LookupInterface(control As IRibbonControl)
     LookupDialog.Show
 End Sub
 
+Function GetRegistryURLs()
+    On Error Resume Next
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    GetRegistryURLs = oRegistry.RegRead(sRegString & "CatalogURL")
+    If Err.Number <> 0 Then
+        oRegistry.RegWrite sRegString & "CatalogURL", "", "REG_SZ"
+        GetRegistryURLs = ""
+    End If
+End Function
+
+Sub SetRegistryURLsFromCombo()
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    iSelected = LookupDialog.CatalogURLBox.ListIndex
+    sCatalogURLs = LookupDialog.CatalogURLBox.Value
+    addToCombo = True
+    For i = 0 To LookupDialog.CatalogURLBox.ListCount - 1
+        If i <> iSelected Then
+            sCatalogURLs = sCatalogURLs & "|" & LookupDialog.CatalogURLBox.List(i)
+        End If
+        If LookupDialog.CatalogURLBox.List(i) = LookupDialog.CatalogURLBox.Value Then
+            addToCombo = False
+        End If
+    Next i
+    If addToCombo Then
+        LookupDialog.CatalogURLBox.AddItem LookupDialog.CatalogURLBox.Value
+    End If
+    oRegistry.RegWrite sRegString & "CatalogURL", sCatalogURLs, "REG_SZ"
+End Sub
+
+Function GetFieldSets()
+    On Error Resume Next
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    GetFieldSets = oRegistry.RegRead(sRegString & "FieldSets")
+     If Err.Number <> 0 Then
+        oRegistry.RegWrite sRegString & "FieldSets", "", "REG_SZ"
+        GetFieldSets = ""
+    End If
+End Function
+
+Function SetFieldSets(sSetString As String)
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    oRegistry.RegWrite sRegString & "FieldSets", sSetString, "REG_SZ"
+End Function
+
 Sub PopulateCombos()
     Dim sCatalogURL As String
     On Error Resume Next
-    sCatalogURL = CreateObject("WScript.Shell").RegRead("HKCU\Software\Excel Local Catalog Lookup\CatalogURL")
+    sCatalogURLs = GetRegistryURLs()
     If Err.Number = 0 Then
-        LookupDialog.CatalogURLBox.Text = sCatalogURL
+        LookupDialog.CatalogURLBox.Clear
+        aCatalogURLs = Split(sCatalogURLs, "|")
+        For i = 0 To UBound(aCatalogURLs)
+            LookupDialog.CatalogURLBox.AddItem aCatalogURLs(i)
+        Next i
+        LookupDialog.CatalogURLBox.ListIndex = 0
+        'LookupDialog.CatalogURLBox.Text = sCatalogURL
+    End If
+
+    sFieldSets = GetFieldSets()
+    If Err.Number = 0 Then
+        LookupDialog.FieldSetList.Clear
+        aFieldSets = Split(sFieldSets, "|")
+        For i = 0 To UBound(aFieldSets)
+            aFields = Split(aFieldSets(i), "¦")
+            LookupDialog.FieldSetList.AddItem aFields(0)
+        Next i
     End If
 
     LookupDialog.SearchFieldCombo.Clear
     LookupDialog.ResultTypeCombo.Clear
             
-    LookupDialog.SearchFieldCombo.AddItem "Keyword"
+    LookupDialog.SearchFieldCombo.AddItem "Keywords"
     LookupDialog.SearchFieldCombo.AddItem "Call No."
     LookupDialog.SearchFieldCombo.AddItem "Title"
     LookupDialog.SearchFieldCombo.AddItem "ISBN"
@@ -65,10 +137,10 @@ Sub PopulateCombos()
     LookupDialog.ResultTypeCombo.AddItem "MMS ID"
     LookupDialog.ResultTypeCombo.AddItem "ISBN"
     LookupDialog.ResultTypeCombo.AddItem "Title"
-    LookupDialog.ResultTypeCombo.AddItem "Call No."
-    LookupDialog.ResultTypeCombo.AddItem "Location(s)"
+    LookupDialog.ResultTypeCombo.AddItem "*Call No."
+    LookupDialog.ResultTypeCombo.AddItem "*Location/DB Name"
     LookupDialog.ResultTypeCombo.AddItem "Language code"
-    LookupDialog.ResultTypeCombo.AddItem "Coverage"
+    LookupDialog.ResultTypeCombo.AddItem "*Coverage"
     LookupDialog.ResultTypeCombo.AddItem "Leader"
 
     LookupDialog.SearchFieldCombo.ListIndex = 0
@@ -96,6 +168,16 @@ Sub RedrawButtons()
             .RemoveResultButton.Enabled = False
             .MoveUpButton.Enabled = False
             .MoveDownButton.Enabled = False
+        End If
+        .NewSetButton.Enabled = True
+        If .FieldSetList.ListCount > 0 And .FieldSetList.ListIndex > -1 Then
+            .SaveSetButton.Enabled = True
+            .LoadSetButton.Enabled = True
+            .DeleteSetButton.Enabled = True
+        Else
+            .SaveSetButton.Enabled = False
+            .LoadSetButton.Enabled = False
+            .DeleteSetButton.Enabled = False
         End If
     End With
 End Sub
@@ -136,7 +218,6 @@ Function EncodeURI(ByVal sStr As String) As String
 res = ""
 For i = 1 To Len(sStr)
     a = AscW(Mid(sStr, i, 1)) And &HFFFF&
-    'Debug.Print a
     Select Case a
     Case 97 To 122, 65 To 90, 48 To 57, 45, 46, 95, 126
         code = Mid(sStr, i, 1)
@@ -168,11 +249,12 @@ End Function
 
 Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String) As String
     sUrl = sBaseURL & "?operation=searchRetrieve&version=1.2&query="
+    sQuery1 = Replace(sQuery1, "http://", "")
     sQuery = EncodeURI(sQuery1)
     sIndex = ""
     Select Case sSearchType
 
-    Case "Keyword"
+    Case "Keywords"
         sIndex = "alma.all_for_ui"
     Case "Call No."
         sIndex = "alma.PermanentCallNumber"
@@ -186,6 +268,8 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
     Case "ISSN"
         sQuery = NormalizeISSN(sQuery1)
         sIndex = "alma.issn"
+    Case Else
+        sIndex = sSearchType
     End Select
     Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
         sQuery = Replace(sQuery, "||", "|")
@@ -209,9 +293,73 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
     If Not LookupDialog.IncludeSuppressed Then
         sUrl = sUrl & "+AND+alma.mms_tagSuppressed=false"
     End If
-    
     ConstructURL = sUrl
 
+End Function
+
+
+Function GetAllFields()
+    If oXMLHTTP Is Nothing Then
+        Initialize
+    End If
+    Dim sCatalogURL As String
+    sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
+    invalidURL = False
+    If Left(sCatalogURL, 4) <> "http" Then
+        invalidURL = True
+    End If
+    If Not invalidURL Then
+        sExplainURL = sCatalogURL & "?version=1.2&operation=explain"
+        With oXMLHTTP
+            .Open "GET", sExplainURL, True
+            .send
+            Do While .readyState <> 4
+                DoEvents
+            Loop
+            sResponse = .responseText
+            If .Status <> 200 Or InStr(sResponse, "explainResponse") = 0 Then
+                invalidURL = True
+            End If
+        End With
+    End If
+    If invalidURL Then
+        MsgBox ("Cannot access catalog.  Please confirm the Alma URL is correct")
+        GetAllFields = Null
+        Exit Function
+    End If
+    oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:xr='http://www.loc.gov/zing/srw/' " & _
+        "xmlns:xpl='http://explain.z3950.org/dtd/2.0/' " & _
+        "xmlns:ns='http://explain.z3950.org/dtd/2.1/'"
+    oXMLDOM.LoadXML (sResponse)
+    sFields = ""
+    Set aFields = oXMLDOM.SelectNodes("xr:explainResponse/xr:record/xr:recordData/" & _
+        "xpl:explain/xpl:indexInfo/xpl:index")
+    Dim aFieldMap() As Variant
+    ReDim aFieldMap(aFields.Length - 1, 2)
+    For i = 0 To aFields.Length - 1
+        sLabel = aFields(i).SelectSingleNode("ns:title").Text
+        sIndexCode = aFields(i).SelectSingleNode("xpl:map/xpl:name").Text
+        sIndexSet = aFields(i).SelectSingleNode("xpl:map/xpl:name/@set").Text
+        aFieldMap(i, 0) = sLabel
+        aFieldMap(i, 1) = sIndexSet & "." & sIndexCode
+    Next i
+    
+    For i = 0 To UBound(aFieldMap)
+        For j = i + 1 To UBound(aFieldMap)
+            SearchI = Replace(UCase(aFieldMap(i, 0)), "(", "")
+            SearchJ = Replace(UCase(aFieldMap(j, 0)), "(", "")
+            If UCase(SearchI > SearchJ) Then
+                t1 = aFieldMap(j, 0)
+                t2 = aFieldMap(j, 1)
+                aFieldMap(j, 0) = aFieldMap(i, 0)
+                aFieldMap(j, 1) = aFieldMap(i, 1)
+                aFieldMap(i, 0) = t1
+                aFieldMap(i, 1) = t2
+            End If
+        Next j
+    Next i
+    
+    GetAllFields = aFieldMap
 End Function
 
 Function Lookup(sQuery1 As String, sCatalogURL As String) As String
@@ -225,7 +373,6 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
       
     
     sUrl = ConstructURL(sCatalogURL, sQuery1, sSearchType)
-    'Debug.Print sUrl
     sResponse = ""
 
     With oXMLHTTP
@@ -241,15 +388,12 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
 End Function
 
 Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
-    'Dim aRecords() As Object
-    'Dim aResultFields() As String
-      
     aResultFields = Split(sResultTypeAll, "|")
     iResultTypes = UBound(aResultFields)
-    sResultXML = Replace(sResultXML, "xmlns=""http://www.loc.gov/zing/srw/""", "")
-    
+    oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:sr='http://www.loc.gov/zing/srw/' " & _
+        "xmlns:marc='http://www.loc.gov/MARC21/slim'"
     oXMLDOM.LoadXML (sResultXML)
-    Set aRecords = oXMLDOM.SelectNodes("searchRetrieveResponse/records/record/recordData/marc:record")
+    Set aRecords = oXMLDOM.SelectNodes("sr:searchRetrieveResponse/sr:records/sr:record/sr:recordData/marc:record")
 
     iRecords = aRecords.Length
 
@@ -269,6 +413,12 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
            sRecord = ""
            For h = 0 To UBound(aResultFields)
               sResultType = aResultFields(h)
+              sResultFilter = ""
+              iFilterPos = InStr(1, sResultType, "#")
+              If iFilterPos > 0 Then
+                sResultFilter = Mid(sResultType, iFilterPos + 1)
+                sResultType = Left(sResultType, iFilterPos - 1)
+              End If
               sBibPrefix = "marc:datafield"
                If sResultType = "000" Then
                   sBibPrefix = "marc:leader"
@@ -400,8 +550,21 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
                         sRecord = "Error in field/subfield name"
                       End If
                       oRegEx.Pattern = " \u00A6 "
-                      sRecord = oRegEx.Replace(sRecord, Chr(166))
-                      ExtractField = ExtractField & Trim(sRecord)
+                      sRecord = Trim(oRegEx.Replace(sRecord, Chr(166)))
+                      If sResultFilter <> "" Then
+                         sRecordFiltered = ""
+                         aResults = Split(sRecord, Chr(166))
+                         For j = 0 To UBound(aResults)
+                            If InStr(1, aResults(j), sResultFilter) > 0 Then
+                                If sRecordFiltered <> "" Then
+                                    sRecordFiltered = sRecordFiltered & Chr(166)
+                                End If
+                                sRecordFiltered = sRecordFiltered & aResults(j)
+                            End If
+                         Next j
+                         sRecord = sRecordFiltered
+                      End If
+                      ExtractField = ExtractField & sRecord
                   Case Else
                      ExtractField = ExtractField & "ERROR"
               End Select
@@ -424,7 +587,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
             ExtractField = "TRUE"
         End If
     End If
-    'Debug.Print ExtractField
 End Function
 
 Function NormalizeISBN(sQuery As String) As String
@@ -448,7 +610,6 @@ Function NormalizeISBN(sQuery As String) As String
     Else
         NormalizeISBN = Left(sQuery, 13)
     End If
-    'Debug.Print NormalizeISBN & " " & GenerateCheckDigit(NormalizeISBN)
     If LookupDialog.ValidateCheckBox.Value Then
         NormalizeISBN = GenerateCheckDigit(NormalizeISBN)
         NormalizeISBN = GetOtherISBN(NormalizeISBN)
@@ -563,7 +724,6 @@ Function NormalizeISSN(sQuery As String) As String
     Else
         NormalizeISSN = Left(sQuery, 8)
     End If
-    'Debug.Print NormalizeISSN & " " & GenerateCheckDigit(NormalizeISSN)
     If LookupDialog.ValidateCheckBox.Value Then
         NormalizeISSN = GenerateCheckDigit(NormalizeISSN)
     End If
