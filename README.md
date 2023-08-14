@@ -6,7 +6,7 @@ To install the “Look up in Local Catalog” plugin, simply run the installer a
 Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
 
-![image](./img/dialog.jpg)
+<img src='./img/dialog.jpg' width=500>
 
 Below is an explanation of the fields in this dialog:
 
