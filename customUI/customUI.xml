@@ -1,0 +1,12 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui"
+	xmlns:Q="Excel 2007 VBA Prog Ref">
+  <ribbon startFromScratch="false">
+  	<tabs>
+  		<tab idQ="Q:TabLibrary" label="Library Tools">
+    		    <group idQ="Q:GroupCatalog" label="Library Catalog">
+  				   <button id="ButtonCatalog" label="Look up in Local Catalog" onAction="Catalog.LookupInterface" size="large" image="library" />
+			</group>
+		  </tab>
+  	</tabs>
+  </ribbon>
+</customUI>
