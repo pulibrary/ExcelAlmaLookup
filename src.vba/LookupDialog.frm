@@ -146,6 +146,7 @@ Private Sub OKButton_Click()
     Set oSourceRange = Range(LookupRange.Value)
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
+        
         With oSourceRange
             iRowCount = oSourceRange.Rows.Count
             iSourceColumn = .Cells(1, 1).Column
@@ -153,15 +154,22 @@ Private Sub OKButton_Click()
             If LookupRange.Value Like "*#*" Then
                 iLastSourceRow = iFirstSourceRow + iRowCount - 1
             Else
-                iLastSourceRow = .Range("A65534").End(xlUp).Row
+                iLastSourceRow = .Range("A999999").End(xlUp).Row
             End If
             If iFirstSourceRow + .Rows.Count - 1 < iLastSourceRow Then
                 iLastSourceRow = iFirstSourceRow + .Rows.Count - 1
             End If
         End With
-        
+        Catalog.bTerminateLoop = False
+        iTotal = iLastSourceRow - iFirstSourceRow + 1
+        SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
+        SearchingDialog.Show
         'Iterate through rows, look up in catalog
         For i = iFirstSourceRow To iLastSourceRow
+            If Catalog.bTerminateLoop = True Then
+                Exit For
+            End If
+            SearchingDialog.ProgressLabel = "Row " & (i - iFirstSourceRow + 1) & " of " & iTotal
             Application.ScreenUpdating = False
             Dim sSearchString As String
             sSearchString = Cells(i, iSourceColumn).Value
@@ -220,6 +228,8 @@ Private Sub OKButton_Click()
             Application.ScreenUpdating = True
             DoEvents
         Next i
+        Application.ScreenUpdating = True
+        SearchingDialog.Hide
     Else
         MsgBox ("Invalid Range Selected")
     End If

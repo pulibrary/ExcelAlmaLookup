@@ -4,6 +4,7 @@ Global oXMLDOM As Object
 Global oRegistry As Object
 Global sRegString As String
 Global aExplainFields As Variant
+Global bTerminateLoop As Boolean
 
 'Initialize global objects
 Private Sub Initialize()
