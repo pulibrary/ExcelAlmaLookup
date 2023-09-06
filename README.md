@@ -1,15 +1,15 @@
 # ExcelAlmaLookup
 An Excel VBA macro for performing Alma catalog lookups
 
-## System RE
+## System Requirements
+- Microsoft Windows version 7 or higher
+- Microsoft Excel version 2007 or higher
 
 ## Installation
-To install the “Look up in Local Catalog” plugin, simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”.  
+To install the “Look up in Local Catalog” plugin, simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the pugin is installed, a new tab “Library Tools” will appear in the ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”.  
 
-## Usage
-
+## Setting up the query
 Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
-
 
 <img src='./img/dialog.jpg' width=500>
 
@@ -35,4 +35,6 @@ Besides the search keys in the drop-down list, you can enter any search index su
 
 ## Running the Query
 
-Click “OK” to begin the lookup process.  You will see the tool populating the result column with the retrieved values.  If a record contains multiple instances of the desired result field/subfield (or, if a call number/location search is done and a record has multiple holdings), then all instances will be placed in the result cell, separated by “broken vertical bar” characters (¦).  If multiple bib records are retrieved by a single search value, the desired field from each record will be placed in the result cell, separated by solid vertical bars (|).
+Click “OK” to begin the lookup process.  You will see the tool populating the result column with the retrieved values.   If a record contains multiple instances of the desired result field/subfield (or, if a call number/location search is done and a record has multiple holdings), then all instances will be placed in the result cell, separated by “broken vertical bar” characters (¦).  If multiple bib records are retrieved by a single search value, the desired field from each record will be placed in the result cell, separated by solid vertical bars (|).
+
+A small dialog box will show the progress of the query.  You can terminate it at any time by clicking the "Stop Searching" button.
