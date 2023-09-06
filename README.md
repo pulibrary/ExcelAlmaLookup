@@ -1,7 +1,12 @@
 # ExcelAlmaLookup
 An Excel VBA macro for performing Alma catalog lookups
 
+## System RE
+
+## Installation
 To install the “Look up in Local Catalog” plugin, simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”.  
+
+## Usage
 
 Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
