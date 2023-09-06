@@ -5,6 +5,7 @@ Global oRegistry As Object
 Global sRegString As String
 Global aExplainFields As Variant
 Global bTerminateLoop As Boolean
+Global bIsoholdEnabled  As Boolean
 
 'Initialize global objects
 Private Sub Initialize()
@@ -143,7 +144,8 @@ Sub PopulateCombos()
     LookupDialog.ResultTypeCombo.AddItem "Language code"
     LookupDialog.ResultTypeCombo.AddItem "*Coverage"
     LookupDialog.ResultTypeCombo.AddItem "Leader"
-
+    'LookupDialog.ResultTypeCombo.AddItem "*Barcode"
+    
     LookupDialog.SearchFieldCombo.ListIndex = 0
     LookupDialog.ResultTypeCombo.ListIndex = 0
 End Sub
@@ -183,7 +185,7 @@ Sub RedrawButtons()
     End With
 End Sub
 
-'Determined the rightmost column containing data
+'Determine the rightmost column containing data
 Function FindLastColumn() As Integer
     Dim LastColumn As Integer
     If WorksheetFunction.CountA(Cells) > 0 Then
@@ -249,7 +251,7 @@ Private Function EncodeByte(val As Integer) As String
 End Function
 
 Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String) As String
-    sUrl = sBaseURL & "?operation=searchRetrieve&version=1.2&query="
+    sURL = sBaseURL & "?operation=searchRetrieve&version=1.2&query="
     sQuery1 = Replace(sQuery1, "http://", "")
     sQuery = EncodeURI(sQuery1)
     sIndex = ""
@@ -284,17 +286,17 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
     End If
     sQuery = Replace(sQuery, "|", "%22+OR+" & sIndex & "+%3D+%22")
     sQuery = Replace(sQuery, "%7C", "%22+OR+" & sIndex & "+%3D+%22")
-    sUrl = sUrl & sIndex
+    sURL = sURL & sIndex
     If sIndex = "alma.PermanentCallNumber" Then
-        sUrl = sUrl & "+all+"
+        sURL = sURL & "+all+"
     Else
-        sUrl = sUrl & "+%3D+"
+        sURL = sURL & "+%3D+"
     End If
-    sUrl = sUrl & "%22" + sQuery + "%22"
+    sURL = sURL & "%22" + sQuery + "%22"
     If Not LookupDialog.IncludeSuppressed Then
-        sUrl = sUrl & "+AND+alma.mms_tagSuppressed=false"
+        sURL = sURL & "+AND+alma.mms_tagSuppressed=false"
     End If
-    ConstructURL = sUrl
+    ConstructURL = sURL
 
 End Function
 
@@ -373,31 +375,51 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     Dim sFormat As String
       
     
-    sUrl = ConstructURL(sCatalogURL, sQuery1, sSearchType)
+    sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType)
+    sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
 
     With oXMLHTTP
-        .Open "GET", sUrl, True
+        .Open "GET", sURL, True
         .send
-    
         Do While .readyState <> 4
             DoEvents
         Loop
         sResponse = .responseText
+        sHoldings = ""
+        If bIsoholdEnabled Then
+            .Open "GET", sHoldingsURL, True
+            .send
+            Do While .readyState <> 4
+                DoEvents
+            Loop
+            sHoldings = .responseText
+            If InStr(1, sHoldings, "searchRetrieveResponse") = 0 Then
+                bIsoholdEnabled = False
+            End If
+        End If
     End With
-    Lookup = sResponse
+    Lookup = sResponse & sHoldings
 End Function
 
-Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
+Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings) As String
     aResultFields = Split(sResultTypeAll, "|")
     iResultTypes = UBound(aResultFields)
-    oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:sr='http://www.loc.gov/zing/srw/' " & _
-        "xmlns:marc='http://www.loc.gov/MARC21/slim'"
+    sBasePath = ""
+    If bHoldings Then
+        oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:sr='http://www.loc.gov/zing/srw/' " & _
+            "xmlns:hold='http://www.loc.gov/standards/iso20775/'"
+        sBasePath = "sr:searchRetrieveResponse/sr:records/sr:record/sr:recordData/hold:holdings"
+    Else
+        oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:sr='http://www.loc.gov/zing/srw/' " & _
+            "xmlns:marc='http://www.loc.gov/MARC21/slim'"
+        sBasePath = "sr:searchRetrieveResponse/sr:records/sr:record/sr:recordData/marc:record"
+
+    End If
     oXMLDOM.LoadXML (sResultXML)
-    Set aRecords = oXMLDOM.SelectNodes("sr:searchRetrieveResponse/sr:records/sr:record/sr:recordData/marc:record")
+    Set aRecords = oXMLDOM.SelectNodes(sBasePath)
 
     iRecords = aRecords.Length
-
     If iRecords = 0 Then
         ExtractField = "FALSE"
         Exit Function
@@ -426,11 +448,30 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String) As String
                ElseIf Left(sResultType, 2) Like "00" Then
                   sBibPrefix = "marc:controlfield"
                End If
+               sHoldingsPrefix1 = "hold:holding/hold:holdingSimple/hold:copyInformation"
+               sHoldingsPrefix2 = "hold:holding/hold:holdingStructured/hold:set/hold:component"
+               Dim oFieldList As IXMLDOMNodeList
                Select Case sResultType
                   Case "exists"
                      ExtractField = "TRUE "
+                  Case "Barcode"
+                     
+                     Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & _
+                            "/hold:pieceIdentifier/hold:value")
+                     If oFieldList.Length = 0 Then
+                        Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & _
+                            "/hold:pieceIdentifier/hold:value")
+                     End If
+                     For j = 0 To oFieldList.Length - 1
+                        If sRecord <> "" Then
+                            sRecord = sRecord & Chr(166)
+                        End If
+                        sRecord = sRecord & oFieldList.Item(j).XML
+                        oRegEx.Pattern = "<[^>]*>"
+                        sRecord = oRegEx.Replace(sRecord, "")
+                    Next j
+                    ExtractField = ExtractField & sRecord
                   Case "000" To "999z", "AVA" To "AVAz", "AVD" To "AVDz", "AVE" To "AVEz"
-                     Dim oFieldList As IXMLDOMNodeList
                      If sResultType = "000" Then
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix)
                        sRecord = oFieldList.Item(0).XML

@@ -134,7 +134,7 @@ Private Sub OKButton_Click()
     If IsNull(aFieldMap) Then
         Exit Sub
     End If
-    
+    Catalog.bIsoholdEnabled = False 'Set to True when ready to enable isohold features
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
     Catalog.SetRegistryURLsFromCombo
@@ -144,9 +144,9 @@ Private Sub OKButton_Click()
     End If
     'Validate selected range, truncate to part containing actual data
     Set oSourceRange = Range(LookupRange.Value)
+    
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
-        
         With oSourceRange
             iRowCount = oSourceRange.Rows.Count
             iSourceColumn = .Cells(1, 1).Column
@@ -160,6 +160,10 @@ Private Sub OKButton_Click()
                 iLastSourceRow = iFirstSourceRow + .Rows.Count - 1
             End If
         End With
+        If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+            iFirstSourceRow = iFirstSourceRow + 1
+            iRowCount = iRowCount - 1
+        End If
         Catalog.bTerminateLoop = False
         iTotal = iLastSourceRow - iFirstSourceRow + 1
         SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
@@ -169,64 +173,76 @@ Private Sub OKButton_Click()
             If Catalog.bTerminateLoop = True Then
                 Exit For
             End If
-            SearchingDialog.ProgressLabel = "Row " & (i - iFirstSourceRow + 1) & " of " & iTotal
-            Application.ScreenUpdating = False
-            Dim sSearchString As String
-            sSearchString = Cells(i, iSourceColumn).Value
-            If sSearchString <> "" Then
-                If sSearchString = "FALSE" Then
-                    sResultRec = ""
-                Else
-                    sResultRec = Catalog.Lookup(sSearchString, sCatalogURL)
-                End If
-                For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
-                    Dim sType As String
-                    sType = LookupDialog.ResultTypeList.List(j)
-                    sType = Replace(sType, "*", "")
-                    If sType = "MMS ID" Then
-                        sType = "001"
-                    ElseIf sType = "ISBN" Then
-                        sType = "020"
-                    ElseIf sType = "Title" Then
-                        sType = "245"
-                    ElseIf sType = "Call No." Then
-                        sType = "AVA$d"
-                    ElseIf sType = "Location/DB Name" Then
-                        sType = "AVA$bj|AVE$lm"
-                    ElseIf sType = "Language code" Then
-                        sType = "008(35,3)"
-                    ElseIf sType = "Coverage" Then
-                        sType = "AVA$t|AVE$s"
-                    ElseIf sType = "Leader" Then
-                        sType = "000"
-                    ElseIf sType = "True/False" Then
-                        sType = "exists"
-                    End If
-                    If sResultRec = "" Then
-                        sResult = ""
+            If Not Rows(i).EntireRow.Hidden Then
+                SearchingDialog.ProgressLabel = "Row " & (i - iFirstSourceRow + 1) & " of " & iTotal
+                Application.ScreenUpdating = False
+                Dim sSearchString As String
+                sSearchString = Cells(i, iSourceColumn).Value
+                If sSearchString <> "" Then
+                    If sSearchString = "FALSE" Then
+                        sResultRec = ""
+                        sResultHold = ""
                     Else
-                        sResult = ExtractField(sType, CStr(sResultRec))
-                        sResult = Trim(sResult)
-                        iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
-                            (Len(sSearchString) - Len(Replace(sSearchString, "|", "")))
-                        If Right(sResult, 1) = "|" And iExtraBars <> 0 Then
-                            sResult = Left(sResult, Len(sResult) - 1)
+                        sResultRec = Catalog.Lookup(sSearchString, sCatalogURL)
+                        iHoldingsStart = InStr(2, sResultRec, "<?xml")
+                        If iHoldingsStart > 0 Then
+                            sResultHold = Mid(sResultRec, iHoldingsStart)
+                            sResultRec = Left(sResultRec, iHoldingsStart - 1)
                         End If
                     End If
-                    If sResult = "" Then
-                        sResult = False
-                    End If
-                    Cells(i, iResultColumn + j).NumberFormat = "@"
-                    Cells(i, iResultColumn + j).Value = sResult
-                Next j
+                    For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
+                        Dim sType As String
+                        sType = LookupDialog.ResultTypeList.List(j)
+                        sType = Replace(sType, "*", "")
+                        If sType = "MMS ID" Then
+                            sType = "001"
+                        ElseIf sType = "ISBN" Then
+                            sType = "020"
+                        ElseIf sType = "Title" Then
+                            sType = "245"
+                        ElseIf sType = "Call No." Then
+                            sType = "AVA$d"
+                        ElseIf sType = "Location/DB Name" Then
+                            sType = "AVA$bj|AVE$lm"
+                        ElseIf sType = "Language code" Then
+                            sType = "008(35,3)"
+                        ElseIf sType = "Coverage" Then
+                            sType = "AVA$t|AVE$s"
+                        ElseIf sType = "Leader" Then
+                            sType = "000"
+                        ElseIf sType = "True/False" Then
+                            sType = "exists"
+                        End If
+                        If sResultRec = "" Then
+                            sResult = ""
+                        Else
+                            If sType = "Barcode" Then
+                                sResult = ExtractField(sType, CStr(sResultHold), True)
+                            Else
+                                sResult = ExtractField(sType, CStr(sResultRec), False)
+                            End If
+                            sResult = Trim(sResult)
+                            iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
+                                (Len(sSearchString) - Len(Replace(sSearchString, "|", "")))
+                            If Right(sResult, 1) = "|" And iExtraBars <> 0 Then
+                                sResult = Left(sResult, Len(sResult) - 1)
+                            End If
+                        End If
+                        If sResult = "" Then
+                            sResult = False
+                        End If
+                        Cells(i, iResultColumn + j).NumberFormat = "@"
+                        Cells(i, iResultColumn + j).Value = sResult
+                    Next j
+                End If
+                minRow = ActiveWindow.VisibleRange.Row
+                maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
+                If i <= minRow + 1 Or i >= maxRow - 1 Then
+                    ActiveWindow.SmallScroll down:=(i - (maxRow + minRow) / 2) + 1
+                End If
+                Application.ScreenUpdating = True
+                DoEvents
             End If
-            minRow = ActiveWindow.VisibleRange.Row
-            maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
-            If i <= minRow + 1 Or i >= maxRow - 1 Then
-                ActiveWindow.SmallScroll down:=(i - (maxRow + minRow) / 2) + 1
-            End If
-            Application.ScreenUpdating = True
-            DoEvents
         Next i
         Application.ScreenUpdating = True
         SearchingDialog.Hide
