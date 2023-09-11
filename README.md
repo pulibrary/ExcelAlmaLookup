@@ -6,6 +6,9 @@ An Excel VBA macro for performing Alma catalog lookups
 - Microsoft Excel version 2007 or higher
 
 ## Installation
+
+Download there installer <a href="/releases/download/v0.1.0-beta/CatalogLookupInstaller.exe">here</a>.
+
 To install the “Look up in Local Catalog” plugin, simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the pugin is installed, a new tab “Library Tools” will appear in the ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”.  
 
 ## Setting up the query
