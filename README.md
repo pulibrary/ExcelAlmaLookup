@@ -4,6 +4,11 @@ An Excel VBA macro for performing Alma catalog lookups
 ## System Requirements
 - Microsoft Windows version 7 or higher
 - Microsoft Excel version 2007 or higher
+- Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  If it is not, you can ask your catalog administrator to enable this setting, as described in the following documentation:
+
+https://knowledge.exlibrisgroup.com/Alma/Product_Documentation/010Alma_Online_Help_(English)/090Integrations_with_External_Systems/030Resource_Management/190SRU_SRW_Search 
+
+In order to access certain holdings fields (such as location or call number), the "Add Availability" option must be enabled for the SRU profile.  However, even without it enabled, the tool can retrieve any bibliographic field.  The tool does not currently support accessing the catalog if a username and password is required. 
 
 ## Installation
 
