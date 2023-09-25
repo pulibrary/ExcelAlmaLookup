@@ -435,6 +435,9 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
         If oXMLDOM.parseError.ErrorCode = 0 Then
            sRecord = ""
            For h = 0 To UBound(aResultFields)
+              If ExtractField <> "" Then
+                 ExtractField = ExtractField & Chr(166)
+              End If
               sResultType = aResultFields(h)
               sResultFilter = ""
               iFilterPos = InStr(1, sResultType, "#")
@@ -455,7 +458,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                   Case "exists"
                      ExtractField = "TRUE "
                   Case "Barcode"
-                     
                      Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & _
                             "/hold:pieceIdentifier/hold:value")
                      If oFieldList.Length = 0 Then
@@ -616,10 +618,12 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
         Else
            ExtractField = ExtractField & "ERROR" & "|"
         End If
-        'Remove spaces around broken-bar delimiter (multiple hits in the same record)
     Next i
     If Len(ExtractField) > 0 Then
         ExtractField = Left(ExtractField, Len(ExtractField) - 1)
+        If Right(ExtractField, 1) = Chr(166) Then
+            ExtractField = Left(ExtractField, Len(ExtractField) - 1)
+        End If
         ExtractField = Replace(ExtractField, Chr(10), "")
         ExtractField = Replace(ExtractField, Chr(13), "")
     Else

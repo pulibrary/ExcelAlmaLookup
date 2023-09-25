@@ -249,7 +249,11 @@ Private Sub OKButton_Click()
     Else
         MsgBox ("Invalid Range Selected")
     End If
-    LookupDialog.ResultTypeList.Clear
+    If Catalog.bTerminateLoop Then
+        LookupDialog.Show
+    Else
+        LookupDialog.ResultTypeList.Clear
+    End If
 End Sub
 
 Private Sub RecapCheckBox_Click()
