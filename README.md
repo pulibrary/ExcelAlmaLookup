@@ -3,7 +3,7 @@ An Excel VBA plugin for performing Alma catalog lookups
 
 ## Installation
 
-Download there installer here:
+Download the installer here:
 
 <a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
 
