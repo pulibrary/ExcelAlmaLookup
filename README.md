@@ -1,5 +1,5 @@
 # ExcelAlmaLookup
-An Excel VBA macro for performing Alma catalog lookups
+An Excel VBA plugin for performing Alma catalog lookups
 
 ## System Requirements
 - Microsoft Windows version 7 or higher
