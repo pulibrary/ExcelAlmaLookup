@@ -29,7 +29,7 @@ The first time you run the tool, you will need to enter your institution's "Base
 After entering the URL, click “Add URL to List” to save the URL for future use.  One can save multiple URLs and switch between them in order to search different catalogs. If multiple URLs are saved, these can be viewed in a drop-down meny by clicking the triangular button to the right of the URL.  After selecting a URL, you can click “Remove URL from List” to remove it from the drop-down.
 
 ## Setting up the query
-Open an Excel spreadsheet, and highlight the cells containing the data you want to search for in Alma.  You can highlight an entire column, or just specific cells, but all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
+Open an Excel spreadsheet and highlight the cells containing the data you want to search for in Alma.  You can highlight an entire column, or just specific cells, but all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
 <img src='./img/dialog.jpg'>
 
