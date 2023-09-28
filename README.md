@@ -73,8 +73,8 @@ They would like to search the catalog to confirm which items are owned by their 
 
 The "Range of cells to lookup up" field already shows the cells that the user hightlighted (in this case, the entire column A).  So, it is not necessary to change this field.  The user sets "Field to Search" to "ISBN".  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
 - Call number - The asterisk indicates that this will be retrieved from the availability fields.  (If the user wanted to retrieve the call number from a bibliographic field, they could enter a specific MARC field name, such as 050 or 084).
-- 035$a#(OCoLC) - This retrieves all 035 fields containing the text "(OCoLC)", i.e. OCLC numbers.
-- 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field.  This will retrieve original-script version of the Chinese titles.
+- 035$a#(OCoLC) - This retrieves all instances of 035$a containing the text "(OCoLC)", i.e. OCLC numbers.
+- 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field, i.e. the original-script version of the Chinese titles.
 
 The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
 
