@@ -435,7 +435,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
         If oXMLDOM.parseError.ErrorCode = 0 Then
            sRecord = ""
            For h = 0 To UBound(aResultFields)
-              If ExtractField <> "" Then
+              If ExtractField <> "" And Right(ExtractField, 1) <> "|" Then
                  ExtractField = ExtractField & Chr(166)
               End If
               sResultType = aResultFields(h)
