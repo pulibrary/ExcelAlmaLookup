@@ -1,13 +1,5 @@
 # ExcelAlmaLookup
-An Excel VBA plugin for performing Alma catalog lookups
-
-## Installation
-
-Download the installer here:
-
-<a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
-
-Simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”. 
+This plugin is designed to be used within Excel. When integrated with your local Alma instance, the tool can perform batch searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on data provided in the Excel sheet. 
 
 ## System Requirements
 - Microsoft Windows version 7 or higher
@@ -17,6 +9,16 @@ Simply run the installer as the user who will be using the plugin (be sure to qu
 https://knowledge.exlibrisgroup.com/Alma/Product_Documentation/010Alma_Online_Help_(English)/090Integrations_with_External_Systems/030Resource_Management/190SRU_SRW_Search 
 
 In order to access certain holdings fields (such as location or call number), the "Add Availability" option must be enabled for the SRU profile.  However, even without it enabled, the tool can retrieve any bibliographic field.  The tool does not currently support accessing the catalog if a username and password are required.  
+
+## Installation
+
+Download the installer here:
+
+<a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
+
+Simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”. 
+
+<img src='./img/ribbon.jpg'>
 
 ## Setting up the query
 Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
