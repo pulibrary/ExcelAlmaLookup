@@ -1,14 +1,9 @@
 # ExcelAlmaLookup
-This plugin is designed to be used within Excel. When integrated with your local Alma instance, the tool can perform batch searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. 
+An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. 
 
 ## System Requirements
 - Microsoft Windows version 7 or higher
 - Microsoft Excel version 2007 or higher
-- Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
-
-https://knowledge.exlibrisgroup.com/Alma/Product_Documentation/010Alma_Online_Help_(English)/090Integrations_with_External_Systems/030Resource_Management/190SRU_SRW_Search 
-
-In order to access certain holdings fields (such as location or call number), the "Add Availability" option must be enabled for the SRU profile.  However, even without it enabled, the tool can retrieve any bibliographic field.  The tool does not currently support accessing the catalog if a username and password are required.  
 
 ## Installation
 
@@ -16,11 +11,17 @@ Download the installer here:
 
 <a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
 
-Simply run the installer as the user who will be using the plugin (be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”. 
+Simply run the installer as the user who will be using the plugin (and be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”. 
 
 <img src='./img/ribbon.jpg'>
 
 ## Configuration
+Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
+
+https://knowledge.exlibrisgroup.com/Alma/Product_Documentation/010Alma_Online_Help_(English)/090Integrations_with_External_Systems/030Resource_Management/190SRU_SRW_Search 
+
+In order to access certain holdings fields (such as location or call number), the "Add Availability" option must be enabled for the SRU profile.  However, even without it enabled, the tool can retrieve any bibliographic field.  The tool does not currently support accessing the catalog if a username and password are required.  
+
 The first time you run the tool, you will need to enter your institution's "Base URL for Alma SRU".  You can contact your catalog administrator to find out this URL. It typically has the form https://[myinstitution].alma.exlibrisgroup.com/view/sru/[INSTITUTION_CODE].  For example, the screenshot below shows the Base URL for Princeton's catalog:
 
 <img src='./img/baseurl.jpg'>
@@ -28,7 +29,7 @@ The first time you run the tool, you will need to enter your institution's "Base
 After entering the URL, click “Add URL to List” to save the URL for future use.  One can save multiple URLs and switch between them in order to search different catalogs. If multiple URLs are saved, these can be viewed in a drop-down meny by clicking the triangular button to the right of the URL.  After selecting a URL, you can click “Remove URL from List” to remove it from the drop-down.
 
 ## Setting up the query
-Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
+Open an Excel spreadsheet and highlight the cells containing the data you want to search for in Alma.  You can highlight an entire column, or just specific cells, but all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
 <img src='./img/dialog.jpg'>
 
@@ -36,7 +37,7 @@ Below is an explanation of the fields in this dialog:
 
 **Base URL for Alma SRU**:  See the "Configuration" section above.  
 
-**Select a range of cells to look up**: This field indicates which cells contain the values to be searched.  If you selected a range of cells before clicking the button, then this field will already contain the appropriate value.  However, it is possible to select a new range of cells by clicking the button to the right of this field.  Please note that hidden cells in the indicated range will not be included in the search.
+**Select a range of cells to look up**: This field indicates which cells contain the values you want to search for.  If you selected a range of cells before clicking the button, then this field will already contain the appropriate value.  However, it is possible to select a new range of cells by clicking the button to the right of this field.  Please note that hidden cells in the indicated range will not be included in the search.
 
 **Ignore First Row (Header)**: If checked, the first cell in the selected range will not be searched, and no other cells in that row will be overwritten.  You should check this if the first row is a header.
 
@@ -48,16 +49,35 @@ Below is an explanation of the fields in this dialog:
 
 **Field to search**: This indicates what kind of values are in the selected cells (e.g. ISBN, ISSN, Call Number, Title, or MMS ID).  If an ISBN search is done, then spaces, dashes and parenthetical comments (e.g. “(paperback)”) are removed from the value before searching.  Currently, the title search does not strip stopwords or do anything else to “clean up” the titles before searching.  Thus, title searching will not be as accurate as the other search types.
 
-Besides the search keys in the drop-down list, you can enter any search index supported by the Alma SRU.  Clicking the “Additional Fields” button will display a full list of such keys.  Selecting an index from this list will enter the appropriate code in “Field to Search”.
+Besides the search keys in the drop-down list, you can enter any search index supported by the local Alma instance.  Clicking the “Additional Fields” button will display a full list of such keys.  Selecting an index from this list will enter the appropriate code in “Field to Search”.
 
-**Result types**:  The type of data to retrieve from the records that are found.  Selecting “True/False” will populate the column with TRUE and FALSE values based on whether the search values were found in the catalog.  The menu includes other result types, such as call numbers and location codes.  Besides the options in the menu, you can also retrieve any field from the bib record. To retrieve an entire MARC field, enter its 3-digit tag number (e.g. “245”).  (For institutions that include availability information in their records, this can be retrieved using the “AVA”, “AVD” or “AVE” tags.)  A subfield can be retrieved by appending “$” followed by the subfield code (e.g. “245$a”).  To retrieve the part of an 880 field corresponding to another field or subfield, append “-880” (e.g. “245-880” or “245-880$a”).  To show only results containing specific text, append # followed by that text.  For example “035$a#(OCoLC)” will only retrieve 035a fields containing the text “(OCoLC)” (i.e., OCLC numbers).  Subfield tags will be removed from the result before writing it to the spreadsheet.  Multiple result types can be selected, in which case they will be placed in consecutive columns in the spreadsheet, starting with the one indicated in the “Leftmost result column” field.  Use the “Add”, “Remove”, “Move Up” and “Move Down” button to edit or reorder the result types.
+**Result types**:  The type of data to retrieve from the records and output in the spreadsheet.  Selecting “True/False” will populate the result column with TRUE and FALSE values based on whether the search values were found in the catalog.  The menu includes other result types, such as call numbers and location codes.  Besides the options in the menu, you can also retrieve any MARC field from the bibliographic record. To retrieve an entire MARC field, enter its 3-digit tag number (e.g. “245”).  (For institutions that include availability information in their records, this can be retrieved using the “AVA”, “AVD” or “AVE” tags.)  A subfield can be retrieved by appending “$” followed by the subfield code (e.g. “245$a”).  To retrieve the part of an 880 field corresponding to another field or subfield, append “-880” (e.g. “245-880” or “245-880$a”).  To show only results containing specific text, append # followed by that text.  For example “035$a#(OCoLC)” will only retrieve 035a fields containing the text “(OCoLC)” (i.e., OCLC numbers).  Subfield tags will be removed from the result before writing it to the spreadsheet.  Multiple result types (data elements) can be selected for output, in which case they will be placed in consecutive columns in the spreadsheet, starting with the one indicated in the “Leftmost result column” field.  Use the “Add”, “Remove”, “Move Up” and “Move Down” button to edit or reorder the result types.
 
 Note that this tool is designed for running queries on lists of specific titles and identifiers, rather than more general queries that might return a large number of results.  Thus, to improve performance, a maximum of 10 records will be retreived for each row.
 
 **Field Sets**:  Sets of field tags can be saved so that they do not need to be entered manually each time the tool is run.  After compiling a list of fields under “Result Types”, click the “New…” button to create and name a new set.  The “Load” button will populate the “Result Types” list with the fields in an existing set.  “Save” will update the fields in the selected set from the “Result types” list.  “Delete” will delete the selected set.
 
 ## Running the Query
-
-Click “OK” to begin the lookup process.  You will see the tool populating the result column(s) with the retrieved values.  Hidden rows will be skipped.   If a record contains multiple instances of the desired result field/subfield (or, if a call number/location search is done and a record has multiple holdings), then all instances will be placed in the result cell, separated by “broken vertical bar” characters (¦).  If multiple bib records are retrieved by a single search value, the desired field from each record will be placed in the result cell, separated by solid vertical bars (|).
+After selecting or confirming the range of cells to look up, the field to search, and the result type(s), click “OK” to begin the lookup process.  You will see the tool populating the result column(s) with the retrieved values.  Hidden rows will be skipped.   If a record contains multiple instances of the desired result field/subfield (or, if a call number/location search is done and a record has multiple holdings), then all instances will be placed in the result cell, separated by “broken vertical bar” characters (¦).  If multiple bib records are retrieved by a single search value, the desired field from each record will be placed in the result cell, separated by solid vertical bars (|).
 
 A small dialog box will show the progress of the query.  You can terminate it at any time by clicking the "Stop Searching" button.
+
+## Example
+This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
+
+<img src='./img/example1.jpg'>
+
+They would like to search the catalog to confirm which items are owned by their instituion, and retrieve additional data for those items.  Since ISBNs are a more reliable search key than titles, the user highlights column A contianing the ISBNs, then clicks the "Look Up in Local Catalog" button in the "Library Tools" tab.  This brings up the following dialog:
+
+<img src='./img/example2.jpg'>
+
+The "Range of cells to lookup up" field already shows the cells that the user hightlighted (in this case, the entire column A).  So, it is not necessary to change this field.  The user sets "Field to Search" to "ISBN".  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
+- Call number - The asterisk indicates that this will be retrieved from the availability fields.  (If the user wanted to retrieve the call number from a bibliographic field, they could enter a specific MARC field name, such as 050 or 084).
+- 035$a#(OCoLC) - This retrieves all 035 fields containing the text "(OCoLC)", i.e. OCLC numbers.
+- 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field.  This will retrieve original-script version of the Chinese titles.
+
+The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
+
+<img src='./img/example3.jpg'>
+
+For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the ISBN in row 9 was not found in the catalog, the value FALSE is output in each of these columns.
