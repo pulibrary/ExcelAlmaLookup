@@ -1,5 +1,5 @@
 # ExcelAlmaLookup
-This plugin is designed to be used within Excel. When integrated with your local Alma instance, the tool can perform batch searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on data provided in the Excel sheet. 
+This plugin is designed to be used within Excel. When integrated with your local Alma instance, the tool can perform batch searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. 
 
 ## System Requirements
 - Microsoft Windows version 7 or higher
@@ -20,6 +20,13 @@ Simply run the installer as the user who will be using the plugin (be sure to qu
 
 <img src='./img/ribbon.jpg'>
 
+## Configuration
+The first time you run the tool, you will need to enter your institution's "Base URL for Alma SRU".  You can contact your catalog administrator to find out this URL. It typically has the form https://[myinstitution].alma.exlibrisgroup.com/view/sru/[INSTITUTION_CODE].  For example, the screenshot below shows the Base URL for Princeton's catalog:
+
+<img src='./img/baseurl.jpg'>
+
+After entering the URL, click “Add URL to List” to save the URL for future use.  One can save multiple URLs and switch between them in order to search different catalogs. If multiple URLs are saved, these can be viewed in a drop-down meny by clicking the triangular button to the right of the URL.  After selecting a URL, you can click “Remove URL from List” to remove it from the drop-down.
+
 ## Setting up the query
 Before clicking the button, highlight the cells containing the values you want to search for.  You can highlight an entire column, or just specific cells.  But all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
@@ -27,7 +34,7 @@ Before clicking the button, highlight the cells containing the values you want t
 
 Below is an explanation of the fields in this dialog:
 
-**Base URL for Alma SRU**:  Contact your catalog administrator to get this URL.  It typically has the form https://[myinstitution].alma.exlibrisgroup.com/view/sru/[INSTITUTION_CODE].  After entering a URL, click “Add URL to List” to save the URL in the drop-down list for future use.  After selecting a URL, you can click “Remove URL from List” to remove it from the drop-down.
+**Base URL for Alma SRU**:  See the "Configuration" section above.  
 
 **Select a range of cells to look up**: This field indicates which cells contain the values to be searched.  If you selected a range of cells before clicking the button, then this field will already contain the appropriate value.  However, it is possible to select a new range of cells by clicking the button to the right of this field.  Please note that hidden cells in the indicated range will not be included in the search.
 
