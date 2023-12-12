@@ -1,7 +1,7 @@
 Private Sub AdditionalFieldsButton_Click()
     Catalog.aExplainFields = Catalog.GetAllFields()
     AdditionalFieldsDialog.FilterBox.Value = ""
-    If Not IsNull(aFieldMap) Then
+    If Not IsNull(aExplainFields) Then
         AdditionalFieldsDialog.SRUFields.List = aExplainFields
         AdditionalFieldsDialog.Show
     End If
@@ -28,6 +28,24 @@ End Sub
 
 Private Sub CancelButton_Click()
     LookupDialog.Hide
+End Sub
+
+Private Sub CatalogURLBox_Change()
+    Catalog.sAuth = ""
+    sCatalogAuths = GetRegistryAuths()
+    aCatalogAuths = Split(sCatalogAuths, "|")
+    For i = 0 To UBound(aCatalogAuths)
+        aURLAuth = Split(aCatalogAuths(i), "¦")
+        If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
+            sAuth = aURLAuth(1)
+            Exit For
+        End If
+    Next i
+End Sub
+
+Private Sub ClearCredentialsButton_Click()
+    Catalog.ClearRegistryAuth
+    Catalog.sAuth = ""
 End Sub
 
 Private Sub DeleteSetButton_Click()
@@ -78,6 +96,10 @@ Private Function LoadSet(sSetName As String) As Boolean
         End If
     Next i
 End Function
+
+Private Sub HelpButton_Click()
+    ThisWorkbook.FollowHyperlink Catalog.sRepoURL & "#readme"
+End Sub
 
 Private Sub LoadSetButton_Click()
     If LookupDialog.FieldSetList.ListIndex < 0 Then
@@ -134,13 +156,25 @@ Private Sub OKButton_Click()
     If IsNull(aFieldMap) Then
         Exit Sub
     End If
-    Catalog.bIsoholdEnabled = False 'Set to True when ready to enable isohold features
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
     Catalog.SetRegistryURLsFromCombo
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
         AddResultButton_Click
+    End If
+    
+    'Disable ISO Holdings if result types do not require them
+    If Catalog.bIsoholdEnabled = True Then
+        Catalog.bIsoholdEnabled = False
+        For i = 0 To LookupDialog.ResultTypeList.ListCount - 1
+            Dim sResType As String
+            sResType = LookupDialog.ResultTypeList.List(i)
+            If Left(sResType, 2) = "**" Then
+                Catalog.bIsoholdEnabled = True
+                Exit For
+            End If
+        Next i
     End If
     'Validate selected range, truncate to part containing actual data
     Set oSourceRange = Range(LookupRange.Value)
@@ -251,6 +285,10 @@ Private Sub OKButton_Click()
     End If
     If Catalog.bTerminateLoop Then
         LookupDialog.Show
+        If UserPassForm.RememberCheckbox.Value = False Then
+            UserPassForm.UserNameBox.Value = ""
+            UserPassForm.PasswordBox.Value = ""
+        End If
     Else
         LookupDialog.ResultTypeList.Clear
     End If

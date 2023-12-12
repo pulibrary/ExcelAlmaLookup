@@ -2,10 +2,15 @@ Global oRegEx As Object
 Global oXMLHTTP As Object
 Global oXMLDOM As Object
 Global oRegistry As Object
-Global sRegString As String
 Global aExplainFields As Variant
 Global bTerminateLoop As Boolean
+Global bKeepTryingURL As Boolean
 Global bIsoholdEnabled  As Boolean
+Global sCatalogURL As String
+Global sAuth As String
+Public Const sRegString = "HKCU\Software\Excel Local Catalog Lookup\"
+Public Const sVersion = "v1.1.0"
+Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 
 'Initialize global objects
 Private Sub Initialize()
@@ -18,15 +23,41 @@ Private Sub Initialize()
     End With
     
     Set oRegistry = CreateObject("WScript.Shell")
-    sRegString = "HKCU\Software\Excel Local Catalog Lookup\"
-    Set oXMLHTTP = CreateObject("MSXML2.XMLHTTP")
+    Set oXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
     oXMLDOM.SetProperty "SelectionLanguage", "XPath"
     Exit Sub
 ErrHandler:
-    MsgBox ("There was an error connecting to the catalog.  Please try again.")
+    MsgBox ("There was an error initializing the plugin.  Please try again.")
     End
 End Sub
+
+Function GetLatestVersionNumber()
+    If oXMLHTTP Is Nothing Then
+        Initialize
+    End If
+    
+    sAPIUrl = Replace(sRepoURL, "github.com", "api.github.com/repos") & "/releases/latest"
+    sTagLabel = "tag_name"
+    With oXMLHTTP
+        .Open "GET", sAPIUrl, True
+        .send
+        Do While .readyState <> 4
+            DoEvents
+        Loop
+        GetLatestVersionNumber = sVersion
+        If .Status = 200 Then
+            iTagStart = InStr(1, .responseText, sTagLabel)
+            iTagStart = iTagStart + Len(sTagLabel & """:""")
+            If iTagStart > 0 Then
+                iTagEnd = InStr(iTagStart, .responseText, """")
+                If iTagEnd > 0 Then
+                    GetLatestVersionNumber = Mid(.responseText, iTagStart, iTagEnd - iTagStart)
+                End If
+            End If
+        End If
+    End With
+End Function
 
 'Main function called when toolbar button is pressed.  Sets up dialog box.
 Sub LookupInterface(control As IRibbonControl)
@@ -46,6 +77,13 @@ Sub LookupInterface(control As IRibbonControl)
     RedrawButtons
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
     LookupDialog.LookupRange.Value = Selection.Address
+    
+    sLatestVersion = GetLatestVersionNumber
+    If sLatestVersion = sVersion Then
+        LookupDialog.VersionLabel.Caption = "You have the latest version. (" & sVersion & ")"
+    Else
+        LookupDialog.VersionLabel.Caption = "A newer version is available! (" & sLatestVersion & ")"
+    End If
     LookupDialog.Show
 End Sub
 
@@ -80,6 +118,81 @@ Sub SetRegistryURLsFromCombo()
         LookupDialog.CatalogURLBox.AddItem LookupDialog.CatalogURLBox.Value
     End If
     oRegistry.RegWrite sRegString & "CatalogURL", sCatalogURLs, "REG_SZ"
+    
+    sCatalogAuths = GetRegistryAuths
+    aCatalogAuths = Split(sCatalogAuths, "|")
+    sCatalogAuths = ""
+    For i = 0 To UBound(aCatalogAuths)
+        aURLAuth = Split(aCatalogAuths(i), "¦")
+        If InStr(1, sCatalogURLs, aURLAuth(0)) Then
+            If sCatalogAuths <> "" Then
+                sCatalogAuths = sCatalogAuths & "|"
+            End If
+            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
+        End If
+    Next i
+    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
+End Sub
+
+Function GetRegistryAuths()
+    On Error Resume Next
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    GetRegistryAuths = oRegistry.RegRead(sRegString & "CatalogAuth")
+    If Err.Number <> 0 Then
+        oRegistry.RegWrite sRegString & "CatalogAuth", "", "REG_SZ"
+        GetRegistryAuths = ""
+    End If
+End Function
+
+Sub SaveCatalogAuthToRegistry()
+    If oRegistry Is Nothing Then
+        Initialize
+    End If
+    sCatalogAuths = GetRegsistryAuths
+    sCatalogURL = LookupDialog.CatalogURLBox.Text
+    aCatalogAuths = Split(sCatalogAuths, "|")
+    sCatalogAuths = ""
+    bFound = False
+    For i = 0 To UBound(aCatalogAuths)
+        If i > 0 Then
+            sCatalogAuths = sCatalogAuths & "|"
+        End If
+        aURLAuth = Split(aCatalogAuths(i), "¦")
+        If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
+            bFound = True
+            sCatalogAuths = sCatalogAuths & LookupDialog.CatalogURLBox.Text & "¦" & sAuth
+        Else
+            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
+        End If
+    Next i
+    If Not bFound Then
+        If sCatalogAuths <> "" Then
+            sCatalogAuths = sCatalogAuths & "|"
+        End If
+        sCatalogAuths = sCatalogAuths & sCatalogURL & "¦" & sAuth
+    End If
+        
+    
+    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
+End Sub
+
+Sub ClearRegistryAuth()
+    sCatalogURL = LookupDialog.CatalogURLBox.Text
+    sCatalogAuths = GetRegistryAuths
+    aCatalogAuths = Split(sCatalogAuths, "|")
+    sCatalogAuths = ""
+    For i = 0 To UBound(aCatalogAuths)
+        aURLAuth = Split(aCatalogAuths(i), "¦")
+        If sCatalogURL <> aURLAuth(0) Then
+            If sCatalogAuths <> "" Then
+                sCatalogAuths = sCatalogAuths & "|"
+            End If
+            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
+        End If
+    Next i
+    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
 End Sub
 
 Function GetFieldSets()
@@ -105,6 +218,7 @@ Sub PopulateCombos()
     Dim sCatalogURL As String
     On Error Resume Next
     sCatalogURLs = GetRegistryURLs()
+    sCatalogAuths = GetRegistryAuths()
     If Err.Number = 0 Then
         LookupDialog.CatalogURLBox.Clear
         aCatalogURLs = Split(sCatalogURLs, "|")
@@ -112,7 +226,15 @@ Sub PopulateCombos()
             LookupDialog.CatalogURLBox.AddItem aCatalogURLs(i)
         Next i
         LookupDialog.CatalogURLBox.ListIndex = 0
-        'LookupDialog.CatalogURLBox.Text = sCatalogURL
+        
+        aCatalogAuths = Split(sCatalogAuths, "|")
+        For i = 0 To UBound(aCatalogAuths)
+            aURLAuth = Split(aCatalogAuths(i), "¦")
+            If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
+                sAuth = aURLAuth(1)
+                Exit For
+            End If
+        Next i
     End If
 
     sFieldSets = GetFieldSets()
@@ -134,17 +256,18 @@ Sub PopulateCombos()
     LookupDialog.SearchFieldCombo.AddItem "ISBN"
     LookupDialog.SearchFieldCombo.AddItem "ISSN"
     LookupDialog.SearchFieldCombo.AddItem "MMS ID"
+    LookupDialog.SearchFieldCombo.AddItem "Barcode"
     
     LookupDialog.ResultTypeCombo.AddItem "True/False"
     LookupDialog.ResultTypeCombo.AddItem "MMS ID"
     LookupDialog.ResultTypeCombo.AddItem "ISBN"
     LookupDialog.ResultTypeCombo.AddItem "Title"
+    LookupDialog.ResultTypeCombo.AddItem "Language code"
+    LookupDialog.ResultTypeCombo.AddItem "Leader"
     LookupDialog.ResultTypeCombo.AddItem "*Call No."
     LookupDialog.ResultTypeCombo.AddItem "*Location/DB Name"
-    LookupDialog.ResultTypeCombo.AddItem "Language code"
     LookupDialog.ResultTypeCombo.AddItem "*Coverage"
-    LookupDialog.ResultTypeCombo.AddItem "Leader"
-    'LookupDialog.ResultTypeCombo.AddItem "*Barcode"
+    LookupDialog.ResultTypeCombo.AddItem "**Barcode"
     
     LookupDialog.SearchFieldCombo.ListIndex = 0
     LookupDialog.ResultTypeCombo.ListIndex = 0
@@ -271,6 +394,8 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
     Case "ISSN"
         sQuery = NormalizeISSN(sQuery1)
         sIndex = "alma.issn"
+    Case "Barcode"
+        sIndex = "alma.barcode"
     Case Else
         sIndex = sSearchType
     End Select
@@ -301,35 +426,97 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
 End Function
 
 
+Function GenerateAuth(sUsername As String, sPassword As String)
+    Set oB64Obj = CreateObject("MSXML2.DOMDocument")
+    Set oB64Node = oB64Obj.createElement("b64")
+    oB64Node.DataType = "bin.base64"
+    sUserPass = sUsername & ":" & sPassword
+    Dim yUserPassBytes() As Byte
+    yUserPassBytes = StrConv(sUserPass, vbFromUnicode)
+    oB64Node.nodeTypedValue = yUserPassBytes
+    GenerateAuth = oB64Node.Text
+End Function
+
 Function GetAllFields()
     If oXMLHTTP Is Nothing Then
         Initialize
     End If
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
-    invalidURL = False
+    bInvalidURL = False
     If Left(sCatalogURL, 4) <> "http" Then
         invalidURL = True
     End If
-    If Not invalidURL Then
-        sExplainURL = sCatalogURL & "?version=1.2&operation=explain"
-        With oXMLHTTP
-            .Open "GET", sExplainURL, True
-            .send
-            Do While .readyState <> 4
-                DoEvents
-            Loop
-            sResponse = .responseText
-            If .Status <> 200 Or InStr(sResponse, "explainResponse") = 0 Then
-                invalidURL = True
-            End If
-        End With
+    bKeepTryingURL = True
+    bNeedsAuthentication = False
+    bIsoholdEnabled = False
+    If Not bInvalidURL Then
+        While bKeepTryingURL
+            bInvalidURL = False
+            sExplainURL = sCatalogURL & "?version=1.2&operation=explain"
+            With oXMLHTTP
+                .Open "GET", sExplainURL, True
+                .setRequestHeader "Cache-Control", "no-cache,max-age=0"
+                .setRequestHeader "pragma", "no-cache"
+                If sAuth <> "" Then
+                    .setRequestHeader "Authorization", "Basic " + sAuth
+                End If
+                .send
+                
+                Do While .readyState <> 4
+                    DoEvents
+                Loop
+
+                sResponse = .responseText
+                bKeepTryingURL = False
+                If .Status <> 200 Or InStr(sResponse, "explainResponse") = 0 Then
+                    bInvalidURL = True
+                End If
+                If .Status = 401 Then
+                    bNeedsAuthentication = True
+                    bKeepTryingURL = True
+                    bInvalidURL = True
+                    UserPassForm.UserNameBox.Value = ""
+                    UserPassForm.PasswordBox.Value = ""
+                    UserPassForm.Show
+                    If bKeepTryingURL Then
+                        sAuth = GenerateAuth(UserPassForm.UserNameBox.Value, UserPassForm.PasswordBox.Value)
+                    End If
+                End If
+                If .Status = 200 And sAuth <> "" And UserPassForm.RememberCheckbox.Value Then
+                    SaveCatalogAuthToRegistry
+                End If
+            End With
+        Wend
     End If
-    If invalidURL Then
-        MsgBox ("Cannot access catalog.  Please confirm the Alma URL is correct")
+    If bInvalidURL Then
+        If bNeedsAuthentication Then
+            MsgBox ("Cannot log in to catalog.")
+        Else
+            MsgBox ("Cannot access catalog.  Please confirm the Alma URL is correct.")
+        End If
         GetAllFields = Null
         Exit Function
     End If
+    'Check if ISO Holdings are enabled
+    sExplainURL = sExplainURL & "&recordSchema=isohold"
+    With oXMLHTTP
+        .Open "GET", sExplainURL, True
+        If sAuth <> "" Then
+            .setRequestHeader "Authorization", "Basic " + sAuth
+        End If
+        .send
+                
+        Do While .readyState <> 4
+            DoEvents
+        Loop
+        If .Status = 200 Then
+            bIsoholdEnabled = True
+        End If
+        
+    End With
+    
+    
     oXMLDOM.SetProperty "SelectionNamespaces", "xmlns:xr='http://www.loc.gov/zing/srw/' " & _
         "xmlns:xpl='http://explain.z3950.org/dtd/2.0/' " & _
         "xmlns:ns='http://explain.z3950.org/dtd/2.1/'"
@@ -381,6 +568,9 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
 
     With oXMLHTTP
         .Open "GET", sURL, True
+        If sAuth <> "" Then
+            .setRequestHeader "Authorization", "Basic " + sAuth
+        End If
         .send
         Do While .readyState <> 4
             DoEvents
@@ -389,6 +579,9 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
         sHoldings = ""
         If bIsoholdEnabled Then
             .Open "GET", sHoldingsURL, True
+            If sAuth <> "" Then
+                .setRequestHeader "Authorization", "Basic " + sAuth
+            End If
             .send
             Do While .readyState <> 4
                 DoEvents
