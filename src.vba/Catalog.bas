@@ -8,8 +8,9 @@ Global bKeepTryingURL As Boolean
 Global bIsoholdEnabled  As Boolean
 Global sCatalogURL As String
 Global sAuth As String
-Public Const sRegString = "HKCU\Software\Excel Local Catalog Lookup\"
-Public Const sVersion = "v1.1.0"
+Public Const HKEY_CURRENT_USER = &H80000001
+Public Const sRegString = "Software\Excel Local Catalog Lookup"
+Public Const sVersion = "v1.1.1"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 
 'Initialize global objects
@@ -22,7 +23,7 @@ Private Sub Initialize()
         .IgnoreCase = True
     End With
     
-    Set oRegistry = CreateObject("WScript.Shell")
+    Set oRegistry = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
     Set oXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
     oXMLDOM.SetProperty "SelectionLanguage", "XPath"
@@ -73,6 +74,7 @@ Sub LookupInterface(control As IRibbonControl)
             Exit Sub
         End If
     End If
+       
     PopulateCombos
     RedrawButtons
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
@@ -92,9 +94,10 @@ Function GetRegistryURLs()
     If oRegistry Is Nothing Then
         Initialize
     End If
-    GetRegistryURLs = oRegistry.RegRead(sRegString & "CatalogURL")
+    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sValue
+    GetRegistryURLs = sValue
     If Err.Number <> 0 Then
-        oRegistry.RegWrite sRegString & "CatalogURL", "", "REG_SZ"
+        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", ""
         GetRegistryURLs = ""
     End If
 End Function
@@ -117,13 +120,13 @@ Sub SetRegistryURLsFromCombo()
     If addToCombo Then
         LookupDialog.CatalogURLBox.AddItem LookupDialog.CatalogURLBox.Value
     End If
-    oRegistry.RegWrite sRegString & "CatalogURL", sCatalogURLs, "REG_SZ"
+    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sCatalogURLs
     
     sCatalogAuths = GetRegistryAuths
-    aCatalogAuths = Split(sCatalogAuths, "|")
+    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
     sCatalogAuths = ""
     For i = 0 To UBound(aCatalogAuths)
-        aURLAuth = Split(aCatalogAuths(i), "¦")
+        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
         If InStr(1, sCatalogURLs, aURLAuth(0)) Then
             If sCatalogAuths <> "" Then
                 sCatalogAuths = sCatalogAuths & "|"
@@ -131,7 +134,7 @@ Sub SetRegistryURLsFromCombo()
             sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
         End If
     Next i
-    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
+    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
 End Sub
 
 Function GetRegistryAuths()
@@ -139,9 +142,10 @@ Function GetRegistryAuths()
     If oRegistry Is Nothing Then
         Initialize
     End If
-    GetRegistryAuths = oRegistry.RegRead(sRegString & "CatalogAuth")
+    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sValue
+    GetRegistryAuths = sValue
     If Err.Number <> 0 Then
-        oRegistry.RegWrite sRegString & "CatalogAuth", "", "REG_SZ"
+        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", ""
         GetRegistryAuths = ""
     End If
 End Function
@@ -152,17 +156,17 @@ Sub SaveCatalogAuthToRegistry()
     End If
     sCatalogAuths = GetRegsistryAuths
     sCatalogURL = LookupDialog.CatalogURLBox.Text
-    aCatalogAuths = Split(sCatalogAuths, "|")
+    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
     sCatalogAuths = ""
     bFound = False
     For i = 0 To UBound(aCatalogAuths)
         If i > 0 Then
             sCatalogAuths = sCatalogAuths & "|"
         End If
-        aURLAuth = Split(aCatalogAuths(i), "¦")
+        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
         If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
             bFound = True
-            sCatalogAuths = sCatalogAuths & LookupDialog.CatalogURLBox.Text & "¦" & sAuth
+            sCatalogAuths = sCatalogAuths & LookupDialog.CatalogURLBox.Text & ChrW(166) & sAuth
         Else
             sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
         End If
@@ -171,20 +175,20 @@ Sub SaveCatalogAuthToRegistry()
         If sCatalogAuths <> "" Then
             sCatalogAuths = sCatalogAuths & "|"
         End If
-        sCatalogAuths = sCatalogAuths & sCatalogURL & "¦" & sAuth
+        sCatalogAuths = sCatalogAuths & sCatalogURL & ChrW(166) & sAuth
     End If
         
     
-    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
+    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
 End Sub
 
 Sub ClearRegistryAuth()
     sCatalogURL = LookupDialog.CatalogURLBox.Text
     sCatalogAuths = GetRegistryAuths
-    aCatalogAuths = Split(sCatalogAuths, "|")
+    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
     sCatalogAuths = ""
     For i = 0 To UBound(aCatalogAuths)
-        aURLAuth = Split(aCatalogAuths(i), "¦")
+        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
         If sCatalogURL <> aURLAuth(0) Then
             If sCatalogAuths <> "" Then
                 sCatalogAuths = sCatalogAuths & "|"
@@ -192,7 +196,7 @@ Sub ClearRegistryAuth()
             sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
         End If
     Next i
-    oRegistry.RegWrite sRegString & "CatalogAuth", sCatalogAuths, "REG_SZ"
+    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
 End Sub
 
 Function GetFieldSets()
@@ -200,9 +204,11 @@ Function GetFieldSets()
     If oRegistry Is Nothing Then
         Initialize
     End If
-    GetFieldSets = oRegistry.RegRead(sRegString & "FieldSets")
+    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sValue
+    GetFieldSets = sValue
      If Err.Number <> 0 Then
-        oRegistry.RegWrite sRegString & "FieldSets", "", "REG_SZ"
+        Debug.Print Err.Description
+        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", ""
         GetFieldSets = ""
     End If
 End Function
@@ -211,7 +217,7 @@ Function SetFieldSets(sSetString As String)
     If oRegistry Is Nothing Then
         Initialize
     End If
-    oRegistry.RegWrite sRegString & "FieldSets", sSetString, "REG_SZ"
+    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sSetString
 End Function
 
 Sub PopulateCombos()
@@ -221,15 +227,15 @@ Sub PopulateCombos()
     sCatalogAuths = GetRegistryAuths()
     If Err.Number = 0 Then
         LookupDialog.CatalogURLBox.Clear
-        aCatalogURLs = Split(sCatalogURLs, "|")
+        aCatalogURLs = Split(sCatalogURLs, "|", -1, 0)
         For i = 0 To UBound(aCatalogURLs)
             LookupDialog.CatalogURLBox.AddItem aCatalogURLs(i)
         Next i
         LookupDialog.CatalogURLBox.ListIndex = 0
         
-        aCatalogAuths = Split(sCatalogAuths, "|")
+        aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
         For i = 0 To UBound(aCatalogAuths)
-            aURLAuth = Split(aCatalogAuths(i), "¦")
+            aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
             If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
                 sAuth = aURLAuth(1)
                 Exit For
@@ -240,9 +246,9 @@ Sub PopulateCombos()
     sFieldSets = GetFieldSets()
     If Err.Number = 0 Then
         LookupDialog.FieldSetList.Clear
-        aFieldSets = Split(sFieldSets, "|")
+        aFieldSets = Split(sFieldSets, "|", -1, 0)
         For i = 0 To UBound(aFieldSets)
-            aFields = Split(aFieldSets(i), "¦")
+            aFields = Split(aFieldSets(i), ChrW(166), -1, 0)
             LookupDialog.FieldSetList.AddItem aFields(0)
         Next i
     End If
@@ -596,7 +602,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
 End Function
 
 Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings) As String
-    aResultFields = Split(sResultTypeAll, "|")
+    aResultFields = Split(sResultTypeAll, "|", -1, 0)
     iResultTypes = UBound(aResultFields)
     sBasePath = ""
     If bHoldings Then
@@ -629,7 +635,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
            sRecord = ""
            For h = 0 To UBound(aResultFields)
               If ExtractField <> "" And Right(ExtractField, 1) <> "|" Then
-                 ExtractField = ExtractField & Chr(166)
+                 ExtractField = ExtractField & ChrW(166)
               End If
               sResultType = aResultFields(h)
               sResultFilter = ""
@@ -659,7 +665,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                      End If
                      For j = 0 To oFieldList.Length - 1
                         If sRecord <> "" Then
-                            sRecord = sRecord & Chr(166)
+                            sRecord = sRecord & ChrW(166)
                         End If
                         sRecord = sRecord & oFieldList.Item(j).XML
                         oRegEx.Pattern = "<[^>]*>"
@@ -676,7 +682,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='" & sResultType & "']")
                        For j = 0 To oFieldList.Length - 1
                          If sRecord <> "" Then
-                            sRecord = sRecord & Chr(166)
+                            sRecord = sRecord & ChrW(166)
                          End If
                          sRecord = sRecord & oFieldList.Item(j).XML
                        Next j
@@ -712,7 +718,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                         Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='880'][marc:subfield[@code='6' and starts-with(text(),'" & sMainField & "')]]")
                         For j = 0 To oFieldList.Length - 1
                           If sRecord <> "" Then
-                            sRecord = sRecord & Chr(166)
+                            sRecord = sRecord & ChrW(166)
                           End If
                           sRecord = sRecord & oFieldList.Item(j).XML
                         Next j
@@ -744,8 +750,8 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                     
                         Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='" & sMainField & "']")
                         For j = 0 To oFieldList.Length - 1
-                           If sRecord <> "" And Right(sRecord, 1) <> Chr(166) Then
-                             sRecord = sRecord & Chr(166)
+                           If sRecord <> "" And Right(sRecord, 1) <> ChrW(166) Then
+                             sRecord = sRecord & ChrW(166)
                            End If
                            Set oSubfieldList = oFieldList.Item(j).SelectNodes("marc:subfield" & sSubfieldQuery)
                            For k = 0 To oSubfieldList.Length - 1
@@ -770,8 +776,8 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                     
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='880'][marc:subfield[@code='6' and starts-with(text(),'" & sField & "')]]")
                        For j = 0 To oFieldList.Length - 1
-                          If sRecord <> "" And Right(sRecord, 1) <> Chr(166) Then
-                            sRecord = sRecord & Chr(166)
+                          If sRecord <> "" And Right(sRecord, 1) <> ChrW(166) Then
+                            sRecord = sRecord & ChrW(166)
                           End If
                           Set oSubfieldList = oFieldList.Item(j).SelectNodes("marc:subfield" & sSubfieldQuery)
                           For k = 0 To oSubfieldList.Length - 1
@@ -787,14 +793,14 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                         sRecord = "Error in field/subfield name"
                       End If
                       oRegEx.Pattern = " \u00A6 "
-                      sRecord = Trim(oRegEx.Replace(sRecord, Chr(166)))
+                      sRecord = Trim(oRegEx.Replace(sRecord, ChrW(166)))
                       If sResultFilter <> "" Then
                          sRecordFiltered = ""
-                         aResults = Split(sRecord, Chr(166))
+                         aResults = Split(sRecord, ChrW(166), -1, 0)
                          For j = 0 To UBound(aResults)
                             If InStr(1, aResults(j), sResultFilter) > 0 Then
                                 If sRecordFiltered <> "" Then
-                                    sRecordFiltered = sRecordFiltered & Chr(166)
+                                    sRecordFiltered = sRecordFiltered & ChrW(166)
                                 End If
                                 sRecordFiltered = sRecordFiltered & aResults(j)
                             End If
@@ -814,7 +820,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
     Next i
     If Len(ExtractField) > 0 Then
         ExtractField = Left(ExtractField, Len(ExtractField) - 1)
-        If Right(ExtractField, 1) = Chr(166) Then
+        If Right(ExtractField, 1) = ChrW(166) Then
             ExtractField = Left(ExtractField, Len(ExtractField) - 1)
         End If
         ExtractField = Replace(ExtractField, Chr(10), "")

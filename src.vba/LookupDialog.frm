@@ -33,9 +33,9 @@ End Sub
 Private Sub CatalogURLBox_Change()
     Catalog.sAuth = ""
     sCatalogAuths = GetRegistryAuths()
-    aCatalogAuths = Split(sCatalogAuths, "|")
+    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
     For i = 0 To UBound(aCatalogAuths)
-        aURLAuth = Split(aCatalogAuths(i), "¦")
+        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
         If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
             sAuth = aURLAuth(1)
             Exit For
@@ -57,10 +57,10 @@ Private Sub DeleteSetButton_Click()
     sSelectedIndex = LookupDialog.FieldSetList.ListIndex
     LookupDialog.FieldSetList.RemoveItem sSelectedIndex
     sFieldSets = Catalog.GetFieldSets()
-    aFieldSets = Split(sFieldSets, "|")
+    aFieldSets = Split(sFieldSets, "|", -1, 0)
     sNewSets = ""
     For i = 0 To UBound(aFieldSets)
-        If InStr(1, aFieldSets(i), sSelectedSet + "¦") = 0 Then
+        If InStr(1, aFieldSets(i), sSelectedSet + ChrW(166)) = 0 Then
             If i > 0 Then
                 sNewSets = sNewSets & "|"
             End If
@@ -86,10 +86,10 @@ End Sub
 Private Function LoadSet(sSetName As String) As Boolean
     LookupDialog.ResultTypeList.Clear
     sFieldSets = Catalog.GetFieldSets()
-    aFieldSets = Split(sFieldSets, "|")
+    aFieldSets = Split(sFieldSets, "|", -1, 0)
     For i = 0 To UBound(aFieldSets)
-        If InStr(1, aFieldSets(i), sSetName & "¦") > 0 Then
-            aFields = Split(aFieldSets(i), "¦")
+        If InStr(1, aFieldSets(i), sSetName & ChrW(166)) > 0 Then
+            aFields = Split(aFieldSets(i), ChrW(166), -1, 0)
             For j = 1 To UBound(aFields)
                 LookupDialog.ResultTypeList.AddItem aFields(j)
             Next j
@@ -140,7 +140,7 @@ Private Sub NewSetButton_Click()
     If sNewName = "" Then
         Exit Sub
     End If
-    If InStr(1, sNewName, "|") > 0 Or InStr(1, sNewName, Chr(166)) Then
+    If InStr(1, sNewName, "|") > 0 Or InStr(1, sNewName, ChrW(166)) Then
         MsgBox ("Set name cannot contain vertical bar characters")
         Exit Sub
     End If
@@ -349,18 +349,18 @@ Function SaveSet(sSetName As String) As Boolean
     End If
     sSetString = sSetName
     For i = 0 To LookupDialog.ResultTypeList.ListCount - 1
-        sSetString = sSetString & "¦" & LookupDialog.ResultTypeList.List(i)
+        sSetString = sSetString & ChrW(166) & LookupDialog.ResultTypeList.List(i)
     Next i
     
     sAllSets = Catalog.GetFieldSets()
-    aAllSets = Split(sAllSets, "|")
+    aAllSets = Split(sAllSets, "|", -1, 0)
     sNewSets = ""
     bSetFound = False
     For i = 0 To UBound(aAllSets)
         If i > 0 Then
                 sNewSets = sNewSets & "|"
         End If
-        If InStr(1, aAllSets(i), sSetName + "¦") > 0 Then
+        If InStr(1, aAllSets(i), sSetName + ChrW(166)) > 0 Then
             sNewSets = sNewSets & sSetString
             bSetFound = True
         Else
