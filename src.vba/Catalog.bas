@@ -95,6 +95,9 @@ Function GetRegistryURLs()
         Initialize
     End If
     oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sValue
+    If IsNull(sValue) Then
+        sValue = ""
+    End If
     GetRegistryURLs = sValue
     If Err.Number <> 0 Then
         oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", ""
@@ -143,6 +146,9 @@ Function GetRegistryAuths()
         Initialize
     End If
     oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sValue
+    If IsNull(sValue) Then
+        sValue = ""
+    End If
     GetRegistryAuths = sValue
     If Err.Number <> 0 Then
         oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", ""
@@ -205,9 +211,11 @@ Function GetFieldSets()
         Initialize
     End If
     oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sValue
+    If IsNull(sValue) Then
+        sValue = ""
+    End If
     GetFieldSets = sValue
      If Err.Number <> 0 Then
-        Debug.Print Err.Description
         oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", ""
         GetFieldSets = ""
     End If
