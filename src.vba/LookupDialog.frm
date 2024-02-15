@@ -28,6 +28,7 @@ End Sub
 
 Private Sub CancelButton_Click()
     LookupDialog.Hide
+    End
 End Sub
 
 Private Sub CatalogURLBox_Change()
@@ -178,7 +179,6 @@ Private Sub OKButton_Click()
     End If
     'Validate selected range, truncate to part containing actual data
     Set oSourceRange = Range(LookupRange.Value)
-    
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
         With oSourceRange
@@ -292,6 +292,7 @@ Private Sub OKButton_Click()
     Else
         LookupDialog.ResultTypeList.Clear
     End If
+    End
 End Sub
 
 Private Sub RecapCheckBox_Click()

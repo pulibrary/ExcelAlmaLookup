@@ -10,7 +10,7 @@ Global sCatalogURL As String
 Global sAuth As String
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.1.1"
+Public Const sVersion = "v1.1.2"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 
 'Initialize global objects
@@ -22,7 +22,6 @@ Private Sub Initialize()
         .Global = True
         .IgnoreCase = True
     End With
-    
     Set oRegistry = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
     Set oXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
@@ -74,7 +73,7 @@ Sub LookupInterface(control As IRibbonControl)
             Exit Sub
         End If
     End If
-       
+    
     PopulateCombos
     RedrawButtons
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
@@ -840,6 +839,13 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
             ExtractField = "TRUE"
         End If
     End If
+    oRegEx.Pattern = "&[^; ]+;"
+    If oRegEx.Test(ExtractField) Then
+        ExtractField = HtmlDecode(ExtractField)
+        If oRegEx.Test(ExtractField) Then
+            ExtractField = HtmlDecode(ExtractField)
+        End If
+    End If
 End Function
 
 Function NormalizeISBN(sQuery As String) As String
@@ -980,4 +986,19 @@ Function NormalizeISSN(sQuery As String) As String
     If LookupDialog.ValidateCheckBox.Value Then
         NormalizeISSN = GenerateCheckDigit(NormalizeISSN)
     End If
+End Function
+
+Public Function HtmlDecode(StringToDecode As Variant) As String
+    Set oRegEx = CreateObject("vbscript.regexp")
+    oRegEx.Global = True
+    oRegEx.Pattern = "&[^; ]+;"
+    Set oMatch = oRegEx.Execute(StringToDecode)
+    For i = 0 To oMatch.Count - 1
+        sEntity = CStr(oMatch.Item(i))
+        StringToDecode = Replace(StringToDecode, sEntity, LCase(sEntity))
+    Next i
+    Set oMSHTML = CreateObject("htmlfile")
+    Set e = oMSHTML.createElement("T")
+    e.innerHTML = StringToDecode
+    HtmlDecode = e.innerText
 End Function
