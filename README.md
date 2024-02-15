@@ -1,4 +1,4 @@
-# ExcelAlmaLookup
+# Excel Alma Lookup
 An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. 
 
 ## System Requirements
