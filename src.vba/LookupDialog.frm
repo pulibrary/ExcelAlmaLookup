@@ -261,7 +261,7 @@ Private Sub OKButton_Click()
                             stype = "exists"
                         ElseIf stype = "ReCAP Holdings" Then
                             stype = "recap"
-                        ElseIf stype = "ILPC ReShare Holdings" Then
+                        ElseIf stype = "IPLC ReShare Holdings" Then
                             stype = "999$sp"
                         End If
                         If sResultRec = "" Then

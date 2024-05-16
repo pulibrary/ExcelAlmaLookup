@@ -15,7 +15,7 @@ Public Const sVersion = "v1.2.0"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
-Public Const sILPCReshareURL = "https://borrowdirect.reshare.indexdata.com/api/v1/search?type=AllFields&field%5B%5D=fullRecord&lookfor="
+Public Const sIPLCReshareURL = "https://borrowdirect.reshare.indexdata.com/api/v1/search?type=AllFields&field%5B%5D=fullRecord&lookfor="
 
 'Initialize global objects
 Private Sub Initialize()
@@ -281,8 +281,8 @@ Sub PopulateCombos()
     Dim aOtherSources(4, 2) As Variant
     aOtherSources(0, 0) = "source:recap"
     aOtherSources(0, 1) = "ReCAP"
-    aOtherSources(1, 0) = "source:ilpc_reshare"
-    aOtherSources(1, 1) = "ILPC ReShare (BorrowDirect)"
+    aOtherSources(1, 0) = "source:iplc_reshare"
+    aOtherSources(1, 1) = "IPLC ReShare (BorrowDirect)"
     aOtherSources(2, 0) = "source:lccat"
     aOtherSources(2, 1) = "Library of Congress"
     'aOtherSources(3, 0) = "source:worldcat"
@@ -319,8 +319,8 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.Style = 0 'fmStyleDropDownCombo
     End If
     
-    If LookupDialog.CatalogURLBox = "source:ilpc_reshare" Then
-        LookupDialog.ResultTypeCombo.AddItem "ILPC ReShare Holdings"
+    If LookupDialog.CatalogURLBox = "source:iplc_reshare" Then
+        LookupDialog.ResultTypeCombo.AddItem "IPLC ReShare Holdings"
     End If
     
     If Not bIsAlma Then
@@ -626,8 +626,8 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
       
     If sCatalogURL = "source:recap" Then
         sURL = sBlacklightURL & sQuery1
-    ElseIf sCatalogURL = "source:ilpc_reshare" Then
-        sURL = sILPCReshareURL & "%22" & sQuery1 & "%22"
+    ElseIf sCatalogURL = "source:iplc_reshare" Then
+        sURL = sIPLCReshareURL & "%22" & sQuery1 & "%22"
     ElseIf sCatalogURL = "source:lccat" Then
         sURL = sLCCatURL & "?version=1.1&operation=searchRetrieve" & _
             "&maximumRecords=10&recordSchema=marcxml&query=%22" & sQuery1 & "%22"
@@ -648,7 +648,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
         Loop
         sResponse = .responseText
         sHoldings = ""
-        If sCatalogURL = "source:ilpc_reshare" Then
+        If sCatalogURL = "source:iplc_reshare" Then
             sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
             iXMLstart = InStr(1, sResponse, "<record")
             While iXMLstart > 0
@@ -1016,15 +1016,15 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
             ExtractField = HtmlDecode(ExtractField)
         End If
     End If
-    If LookupDialog.CatalogURLBox.Value = "source:ilpc_reshare" Then
-        ExtractField = DecodeILPCUnicode(ExtractField)
+    If LookupDialog.CatalogURLBox.Value = "source:iplc_reshare" Then
+        ExtractField = DecodeIPLCUnicode(ExtractField)
     End If
     If sResultType = "999$sp" Then
-        ExtractField = CollapseILPCHoldings(ExtractField)
+        ExtractField = CollapseIPLCHoldings(ExtractField)
     End If
 End Function
 
-Function CollapseILPCHoldings(sHoldings)
+Function CollapseIPLCHoldings(sHoldings)
     sResult = ""
     aHoldingsA = Split(sHoldings, "|")
     For i = 0 To UBound(aHoldingsA)
@@ -1054,10 +1054,10 @@ Function CollapseILPCHoldings(sHoldings)
             End If
         Next j
     Next i
-    CollapseILPCHoldings = sResult
+    CollapseIPLCHoldings = sResult
 End Function
 
-Function DecodeILPCUnicode(sSource As String) As String
+Function DecodeIPLCUnicode(sSource As String) As String
     Set oRegEx = CreateObject("vbscript.regexp")
     oRegEx.Pattern = "\\u[0-9a-f]{4}"
     oRegEx.Global = True
@@ -1068,7 +1068,7 @@ Function DecodeILPCUnicode(sSource As String) As String
         sDecoded = ChrW(CDec("&H" & sDecoded))
         sSource = Replace(sSource, oMatch.Item(i), sDecoded)
     Next i
-    DecodeILPCUnicode = sSource
+    DecodeIPLCUnicode = sSource
 End Function
 
 Function NormalizeISBN(sQuery As String) As String
