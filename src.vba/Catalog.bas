@@ -6,12 +6,16 @@ Global aExplainFields As Variant
 Global bTerminateLoop As Boolean
 Global bKeepTryingURL As Boolean
 Global bIsoholdEnabled  As Boolean
+Global bIsAlma As Boolean
 Global sCatalogURL As String
 Global sAuth As String
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.1.2"
+Public Const sVersion = "v1.2.0"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
+Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
+Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
+Public Const sILPCReshareURL = "https://borrowdirect.reshare.indexdata.com/api/v1/search?type=AllFields&field%5B%5D=fullRecord&lookfor="
 
 'Initialize global objects
 Private Sub Initialize()
@@ -41,7 +45,7 @@ Function GetLatestVersionNumber()
     sTagLabel = "tag_name"
     With oXMLHTTP
         .Open "GET", sAPIUrl, True
-        .send
+        .Send
         Do While .readyState <> 4
             DoEvents
         Loop
@@ -262,7 +266,7 @@ Sub PopulateCombos()
 
     LookupDialog.SearchFieldCombo.Clear
     LookupDialog.ResultTypeCombo.Clear
-            
+        
     LookupDialog.SearchFieldCombo.AddItem "Keywords"
     LookupDialog.SearchFieldCombo.AddItem "Call No."
     LookupDialog.SearchFieldCombo.AddItem "Title"
@@ -270,20 +274,66 @@ Sub PopulateCombos()
     LookupDialog.SearchFieldCombo.AddItem "ISSN"
     LookupDialog.SearchFieldCombo.AddItem "MMS ID"
     LookupDialog.SearchFieldCombo.AddItem "Barcode"
-    
-    LookupDialog.ResultTypeCombo.AddItem "True/False"
-    LookupDialog.ResultTypeCombo.AddItem "MMS ID"
-    LookupDialog.ResultTypeCombo.AddItem "ISBN"
-    LookupDialog.ResultTypeCombo.AddItem "Title"
-    LookupDialog.ResultTypeCombo.AddItem "Language code"
-    LookupDialog.ResultTypeCombo.AddItem "Leader"
-    LookupDialog.ResultTypeCombo.AddItem "*Call No."
-    LookupDialog.ResultTypeCombo.AddItem "*Location/DB Name"
-    LookupDialog.ResultTypeCombo.AddItem "*Coverage"
-    LookupDialog.ResultTypeCombo.AddItem "**Barcode"
-    
     LookupDialog.SearchFieldCombo.ListIndex = 0
+    
+    PopulateSourceDependentOptions
+    
+    Dim aOtherSources(4, 2) As Variant
+    aOtherSources(0, 0) = "source:recap"
+    aOtherSources(0, 1) = "ReCAP"
+    aOtherSources(1, 0) = "source:ilpc_reshare"
+    aOtherSources(1, 1) = "ILPC ReShare (BorrowDirect)"
+    aOtherSources(2, 0) = "source:lccat"
+    aOtherSources(2, 1) = "Library of Congress"
+    'aOtherSources(3, 0) = "source:worldcat"
+    'aOtherSources(3, 1) = "WorldCat"
+
+    
+    OtherSourcesDialog.OtherSourcesListBox.List = aOtherSources
+End Sub
+
+Sub PopulateSourceDependentOptions()
+    LookupDialog.ResultTypeCombo.Clear
+    LookupDialog.ResultTypeCombo.AddItem "True/False"
+    If Catalog.bIsAlma Then
+        LookupDialog.ResultTypeCombo.AddItem "MMS ID"
+    Else
+        LookupDialog.ResultTypeCombo.AddItem "Catalog ID"
+    End If
+    LookupDialog.ResultTypeCombo.AddItem "ISBN"
+    LookupDialog.ResultTypeCombo.AddItem "OCLC No."
+    LookupDialog.ResultTypeCombo.AddItem "Title"
+    If Catalog.bIsAlma Then
+        LookupDialog.ResultTypeCombo.AddItem "Language code"
+        LookupDialog.ResultTypeCombo.AddItem "Leader"
+        LookupDialog.ResultTypeCombo.AddItem "*Call No."
+        LookupDialog.ResultTypeCombo.AddItem "*Location/DB Name"
+        LookupDialog.ResultTypeCombo.AddItem "*Coverage"
+        LookupDialog.ResultTypeCombo.AddItem "**Barcode"
+    End If
+    
+    If LookupDialog.CatalogURLBox = "source:recap" Then
+        LookupDialog.ResultTypeCombo.Style = 2 'fmStyleDropDownList
+        LookupDialog.ResultTypeCombo.AddItem "ReCAP Holdings"
+    Else
+        LookupDialog.ResultTypeCombo.Style = 0 'fmStyleDropDownCombo
+    End If
+    
+    If LookupDialog.CatalogURLBox = "source:ilpc_reshare" Then
+        LookupDialog.ResultTypeCombo.AddItem "ILPC ReShare Holdings"
+    End If
+    
+    If Not bIsAlma Then
+        LookupDialog.SearchFieldCombo.Value = "Keywords"
+        LookupDialog.SearchFieldCombo.Enabled = False
+        LookupDialog.AdditionalFieldsButton.Enabled = False
+    Else
+        LookupDialog.SearchFieldCombo.Enabled = True
+        LookupDialog.AdditionalFieldsButton.Enabled = True
+    End If
+    
     LookupDialog.ResultTypeCombo.ListIndex = 0
+
 End Sub
 
 Sub RedrawButtons()
@@ -474,7 +524,7 @@ Function GetAllFields()
                 If sAuth <> "" Then
                     .setRequestHeader "Authorization", "Basic " + sAuth
                 End If
-                .send
+                .Send
                 
                 Do While .readyState <> 4
                     DoEvents
@@ -518,7 +568,7 @@ Function GetAllFields()
         If sAuth <> "" Then
             .setRequestHeader "Authorization", "Basic " + sAuth
         End If
-        .send
+        .Send
                 
         Do While .readyState <> 4
             DoEvents
@@ -538,8 +588,8 @@ Function GetAllFields()
     Set aFields = oXMLDOM.SelectNodes("xr:explainResponse/xr:record/xr:recordData/" & _
         "xpl:explain/xpl:indexInfo/xpl:index")
     Dim aFieldMap() As Variant
-    ReDim aFieldMap(aFields.Length - 1, 2)
-    For i = 0 To aFields.Length - 1
+    ReDim aFieldMap(aFields.length - 1, 2)
+    For i = 0 To aFields.length - 1
         sLabel = aFields(i).SelectSingleNode("ns:title").Text
         sIndexCode = aFields(i).SelectSingleNode("xpl:map/xpl:name").Text
         sIndexSet = aFields(i).SelectSingleNode("xpl:map/xpl:name/@set").Text
@@ -574,8 +624,16 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
     Dim sFormat As String
       
-    
-    sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType)
+    If sCatalogURL = "source:recap" Then
+        sURL = sBlacklightURL & sQuery1
+    ElseIf sCatalogURL = "source:ilpc_reshare" Then
+        sURL = sILPCReshareURL & "%22" & sQuery1 & "%22"
+    ElseIf sCatalogURL = "source:lccat" Then
+        sURL = sLCCatURL & "?version=1.1&operation=searchRetrieve" & _
+            "&maximumRecords=10&recordSchema=marcxml&query=%22" & sQuery1 & "%22"
+    Else
+        sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType)
+    End If
     sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
 
@@ -584,18 +642,42 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
         If sAuth <> "" Then
             .setRequestHeader "Authorization", "Basic " + sAuth
         End If
-        .send
+        .Send
         Do While .readyState <> 4
             DoEvents
         Loop
         sResponse = .responseText
         sHoldings = ""
+        If sCatalogURL = "source:ilpc_reshare" Then
+            sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
+            iXMLstart = InStr(1, sResponse, "<record")
+            While iXMLstart > 0
+                If iXMLstart < 1 Then
+                    sResponse = ""
+                Else
+                    sResponse = Mid(sResponse, iXMLstart)
+                    iXMLend = InStr(1, sResponse, "<\/collection>")
+                    sThisRecord = Left(sResponse, iXMLend - 1)
+                    sResponse = Mid(sResponse, iXMLend)
+                    sThisRecord = Replace(sThisRecord, "<record>", _
+                        "<record><recordData><record xmlns=""http://www.loc.gov/MARC21/slim"">")
+                    sThisRecord = Replace(sThisRecord, "<\/record>", "<\/record><\/recordData><\/record>")
+                    sThisRecord = Replace(sThisRecord, "\n", "")
+                    sThisRecord = Replace(sThisRecord, "\""", """")
+                    sThisRecord = Replace(sThisRecord, "\/", "/")
+                    sAllRecords = sAllRecords & sThisRecord
+                End If
+                iXMLstart = InStr(1, sResponse, "<record")
+            Wend
+            sAllRecords = sAllRecords & "</records></searchRetrieveResponse>"
+            sResponse = sAllRecords
+        End If
         If bIsoholdEnabled Then
             .Open "GET", sHoldingsURL, True
             If sAuth <> "" Then
                 .setRequestHeader "Authorization", "Basic " + sAuth
             End If
-            .send
+            .Send
             Do While .readyState <> 4
                 DoEvents
             Loop
@@ -622,15 +704,103 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
         sBasePath = "sr:searchRetrieveResponse/sr:records/sr:record/sr:recordData/marc:record"
 
     End If
+    If LookupDialog.CatalogURLBox.Value = "source:recap" Then
+        Set oRegEx = CreateObject("vbscript.regexp")
+        oRegEx.Global = True
+        oRegEx.Pattern = "[\[,]{""id"":""([^""]*)"""
+        
+        sResultJSON = sResultXML
+        sResultString = ""
+        iCurrentPos = 1
+        Set oRecords = oRegEx.Execute(sResultJSON)
+        iRecords = oRecords.Count
+        If iRecords = 0 Then
+            ExtractField = "FALSE"
+            Exit Function
+        End If
+        For Each m In oRecords
+            sID = m.submatches(0)
+            sResultJSON = Mid(sResultJSON, InStr(1, sResultJSON, m.submatches(0)))
+            iRecLength = InStr(Len(m.submatches(0)), sResultJSON, "},{""id""")
+            If iRecLength > 0 Then
+                sCurrentRecord = Left(sResultJSON, InStr(Len(m.submatches(0)), sResultJSON, "},{""id"""))
+            Else
+                sCurrentRecord = sResultJSON
+            End If
+            For h = 0 To UBound(aResultFields)
+                If ExtractField <> "" And Right(ExtractField, 1) <> "|" Then
+                    ExtractField = ExtractField & "|"
+                End If
+                sResultType = aResultFields(h)
+                Select Case sResultType
+                    Case "exists"
+                        ExtractField = "TRUE "
+                    Case "001"
+                        ExtractField = ExtractField & sID
+                    Case "020"
+                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
+                        Set oISBNs = oRegEx.Execute(sCurrentRecord)
+                        If oISBNs.Count > 0 Then
+                            sISBNs = oISBNs(0).submatches(0)
+                            sISBNs = Replace(sISBNs, """,""", Chr(166))
+                            sISBNs = Replace(sISBNs, """", "")
+                            ExtractField = ExtractField & sISBNs
+                        Else
+                            ExtractField = ExtractField & " "
+                        End If
+                    Case "035$a#(OCoLC)"
+                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Oclc S"""
+                        Set oOCLCs = oRegEx.Execute(sCurrentRecord)
+                        If oOCLCs.Count > 0 Then
+                            sOCLCs = oOCLCs(0).submatches(0)
+                            sOCLCs = Replace(sOCLCs, """,""", Chr(166))
+                            sOCLCs = Replace(sOCLCs, """", "")
+                            ExtractField = ExtractField & sOCLCs
+                        Else
+                            ExtractField = ExtractField & " "
+                        End If
+                    Case "245"
+                        oRegEx.Pattern = """attributes"":{""title"":""([^""]*)"""
+                        Set oTitle = oRegEx.Execute(sCurrentRecord)
+                        If oTitle.Count > 0 Then
+                            ExtractField = ExtractField & oTitle(0).submatches(0)
+                        End If
+                    Case "recap"
+                        oRegEx.Pattern = """location_code"":""([^""]*)"""
+                        Set oLoc = oRegEx.Execute(sCurrentRecord)
+                        sLoc = "Princeton"
+                        If oLoc.Count > 0 Then
+                            sLoc = oLoc(0).submatches(0)
+                            Select Case sLoc
+                                Case "scsbhl"
+                                    sLoc = "Harvard"
+                                Case "scsbnypl"
+                                    sLoc = "NYPL"
+                                Case "scsbcul"
+                                    sLoc = "Columbia"
+                                Case Else
+                                    sLoc = "Princeton"
+                            End Select
+                        End If
+                        If InStr(1, ExtractField, sLoc) = 0 Then
+                            ExtractField = ExtractField & sLoc
+                        End If
+                    Case Else
+                        ExtractField = "ERROR:InvalidRecap"
+                        Exit Function
+                End Select
+            Next h
+        Next m
+        Exit Function
+    End If
+    
+    'Debug.Print sResultXML
     oXMLDOM.LoadXML (sResultXML)
     Set aRecords = oXMLDOM.SelectNodes(sBasePath)
-
-    iRecords = aRecords.Length
+        
+    iRecords = aRecords.length
     If iRecords = 0 Then
         ExtractField = "FALSE"
-        Exit Function
-    ElseIf sResultType = "exists" Then
-        ExtractField = "TRUE"
         Exit Function
     End If
     
@@ -666,11 +836,11 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                   Case "Barcode"
                      Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & _
                             "/hold:pieceIdentifier/hold:value")
-                     If oFieldList.Length = 0 Then
+                     If oFieldList.length = 0 Then
                         Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & _
                             "/hold:pieceIdentifier/hold:value")
                      End If
-                     For j = 0 To oFieldList.Length - 1
+                     For j = 0 To oFieldList.length - 1
                         If sRecord <> "" Then
                             sRecord = sRecord & ChrW(166)
                         End If
@@ -687,7 +857,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                        sRecord = oRegEx.Replace(sRecord, "")
                      ElseIf sResultType Like "###" Then
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='" & sResultType & "']")
-                       For j = 0 To oFieldList.Length - 1
+                       For j = 0 To oFieldList.length - 1
                          If sRecord <> "" Then
                             sRecord = sRecord & ChrW(166)
                          End If
@@ -723,7 +893,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                      ElseIf sResultType Like "###-880" Then
                         sMainField = Left(sResultType, 3)
                         Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='880'][marc:subfield[@code='6' and starts-with(text(),'" & sMainField & "')]]")
-                        For j = 0 To oFieldList.Length - 1
+                        For j = 0 To oFieldList.length - 1
                           If sRecord <> "" Then
                             sRecord = sRecord & ChrW(166)
                           End If
@@ -756,12 +926,12 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                         sSubfieldQuery = sSubfieldQuery & "']"
                     
                         Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='" & sMainField & "']")
-                        For j = 0 To oFieldList.Length - 1
+                        For j = 0 To oFieldList.length - 1
                            If sRecord <> "" And Right(sRecord, 1) <> ChrW(166) Then
                              sRecord = sRecord & ChrW(166)
                            End If
                            Set oSubfieldList = oFieldList.Item(j).SelectNodes("marc:subfield" & sSubfieldQuery)
-                           For k = 0 To oSubfieldList.Length - 1
+                           For k = 0 To oSubfieldList.length - 1
                              sRecord = sRecord & oSubfieldList.Item(k).XML
                            Next k
                         Next j
@@ -782,12 +952,12 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                        sSubfieldQuery = sSubfieldQuery & "']"
                     
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='880'][marc:subfield[@code='6' and starts-with(text(),'" & sField & "')]]")
-                       For j = 0 To oFieldList.Length - 1
+                       For j = 0 To oFieldList.length - 1
                           If sRecord <> "" And Right(sRecord, 1) <> ChrW(166) Then
                             sRecord = sRecord & ChrW(166)
                           End If
                           Set oSubfieldList = oFieldList.Item(j).SelectNodes("marc:subfield" & sSubfieldQuery)
-                          For k = 0 To oSubfieldList.Length - 1
+                          For k = 0 To oSubfieldList.length - 1
                             sRecord = sRecord & oSubfieldList.Item(k).XML
                           Next k
                        Next j
@@ -846,6 +1016,59 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
             ExtractField = HtmlDecode(ExtractField)
         End If
     End If
+    If LookupDialog.CatalogURLBox.Value = "source:ilpc_reshare" Then
+        ExtractField = DecodeILPCUnicode(ExtractField)
+    End If
+    If sResultType = "999$sp" Then
+        ExtractField = CollapseILPCHoldings(ExtractField)
+    End If
+End Function
+
+Function CollapseILPCHoldings(sHoldings)
+    sResult = ""
+    aHoldingsA = Split(sHoldings, "|")
+    For i = 0 To UBound(aHoldingsA)
+        aHoldingsB = Split(aHoldingsA(i), Chr(166))
+        For j = 0 To UBound(aHoldingsB)
+            sHCode = aHoldingsB(j)
+            sHCode = Replace(sHCode, "ISIL:", "")
+            iSpace = InStr(1, sHCode, " ")
+            If iSpace > 0 Then
+                sHCodeA = Left(sHCode, iSpace - 1)
+                sHCodeB = Mid(sHCode, iSpace + 1)
+                If InStr(1, sResult, sHCodeA) = 0 Then
+                    If sResult <> "" Then
+                        sResult = sResult & "|"
+                    End If
+                    sResult = sResult & sHCode
+                ElseIf InStr(1, sResult, sHCode) = 0 Then
+                    sResult = Replace(sResult, sHCodeA, sHCode)
+                End If
+            Else
+                If InStr(1, sResult, sHCode) = 0 Then
+                    If sResult <> "" Then
+                        sResult = sResult & "|"
+                    End If
+                    sResult = sResult & sHCode
+                End If
+            End If
+        Next j
+    Next i
+    CollapseILPCHoldings = sResult
+End Function
+
+Function DecodeILPCUnicode(sSource As String) As String
+    Set oRegEx = CreateObject("vbscript.regexp")
+    oRegEx.Pattern = "\\u[0-9a-f]{4}"
+    oRegEx.Global = True
+    Set oMatch = oRegEx.Execute(sSource)
+    For i = 0 To oMatch.Count - 1
+        sDecoded = Mid(CStr(oMatch.Item(i)), 3)
+        Debug.Print oMatch.Item(i)
+        sDecoded = ChrW(CDec("&H" & sDecoded))
+        sSource = Replace(sSource, oMatch.Item(i), sDecoded)
+    Next i
+    DecodeILPCUnicode = sSource
 End Function
 
 Function NormalizeISBN(sQuery As String) As String

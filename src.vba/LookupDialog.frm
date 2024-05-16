@@ -20,8 +20,12 @@ Private Sub AddResultButton_Click()
 End Sub
 
 Private Sub AddURLButton_Click()
-    aFieldMap = Catalog.GetAllFields()
-    If Not IsNull(aFieldMap) Then
+    If Catalog.bIsAlma Then
+        aFieldMap = Catalog.GetAllFields()
+        If Not IsNull(aFieldMap) Then
+            Catalog.SetRegistryURLsFromCombo
+        End If
+    Else
         Catalog.SetRegistryURLsFromCombo
     End If
 End Sub
@@ -42,6 +46,11 @@ Private Sub CatalogURLBox_Change()
             Exit For
         End If
     Next i
+    Catalog.bIsAlma = True
+    If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
+        Catalog.bIsAlma = False
+    End If
+    Catalog.PopulateSourceDependentOptions
 End Sub
 
 Private Sub ClearCredentialsButton_Click()
@@ -153,9 +162,11 @@ Private Sub NewSetButton_Click()
 End Sub
 
 Private Sub OKButton_Click()
-    aFieldMap = Catalog.GetAllFields()
-    If IsNull(aFieldMap) Then
-        Exit Sub
+    If Catalog.bIsAlma Then
+        aFieldMap = Catalog.GetAllFields()
+        If IsNull(aFieldMap) Then
+            Exit Sub
+        End If
     End If
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
@@ -225,35 +236,47 @@ Private Sub OKButton_Click()
                         End If
                     End If
                     For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
-                        Dim sType As String
-                        sType = LookupDialog.ResultTypeList.List(j)
-                        sType = Replace(sType, "*", "")
-                        If sType = "MMS ID" Then
-                            sType = "001"
-                        ElseIf sType = "ISBN" Then
-                            sType = "020"
-                        ElseIf sType = "Title" Then
-                            sType = "245"
-                        ElseIf sType = "Call No." Then
-                            sType = "AVA$d"
-                        ElseIf sType = "Location/DB Name" Then
-                            sType = "AVA$bj|AVE$lm"
-                        ElseIf sType = "Language code" Then
-                            sType = "008(35,3)"
-                        ElseIf sType = "Coverage" Then
-                            sType = "AVA$t|AVE$s"
-                        ElseIf sType = "Leader" Then
-                            sType = "000"
-                        ElseIf sType = "True/False" Then
-                            sType = "exists"
+                        Dim stype As String
+                        stype = LookupDialog.ResultTypeList.List(j)
+                        stype = Replace(stype, "*", "")
+                        If stype = "MMS ID" Or stype = "Catalog ID" Then
+                            stype = "001"
+                        ElseIf stype = "ISBN" Then
+                            stype = "020"
+                        ElseIf stype = "Title" Then
+                            stype = "245"
+                        ElseIf stype = "OCLC No." Then
+                            stype = "035$a#(OCoLC)"
+                        ElseIf stype = "Call No." Then
+                            stype = "AVA$d"
+                        ElseIf stype = "Location/DB Name" Then
+                            stype = "AVA$bj|AVE$lm"
+                        ElseIf stype = "Language code" Then
+                            stype = "008(35,3)"
+                        ElseIf stype = "Coverage" Then
+                            stype = "AVA$t|AVE$s"
+                        ElseIf stype = "Leader" Then
+                            stype = "000"
+                        ElseIf stype = "True/False" Then
+                            stype = "exists"
+                        ElseIf stype = "ReCAP Holdings" Then
+                            stype = "recap"
+                        ElseIf stype = "ILPC ReShare Holdings" Then
+                            stype = "999$sp"
                         End If
                         If sResultRec = "" Then
                             sResult = ""
                         Else
-                            If sType = "Barcode" Then
-                                sResult = ExtractField(sType, CStr(sResultHold), True)
+                            If stype = "Barcode" Then
+                                sResult = ExtractField(stype, CStr(sResultHold), True)
                             Else
-                                sResult = ExtractField(sType, CStr(sResultRec), False)
+                                sResult = ExtractField(stype, CStr(sResultRec), False)
+                                If sResult = "ERROR:InvalidRecap" Then
+                                    MsgBox ("ReCAP queries do not support the result type: """ & LookupDialog.ResultTypeList.List(j) & """")
+                                    SearchingDialog.Hide
+                                    LookupDialog.Show
+                                    Exit Sub
+                                End If
                             End If
                             sResult = Trim(sResult)
                             iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
@@ -295,10 +318,9 @@ Private Sub OKButton_Click()
     End
 End Sub
 
-Private Sub RecapCheckBox_Click()
-    PopulateCombos
-    RedrawButtons
-    LookupDialog.ResultTypeList.Clear
+
+Private Sub OtherSourcesButton_Click()
+    OtherSourcesDialog.Show
 End Sub
 
 Private Sub RemoveResultButton_Click()
