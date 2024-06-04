@@ -39,11 +39,9 @@ SetOverwrite On
 Section "-Install"
  	ClearErrors
 	SetOverwrite try
-  	FileOpen $0 "${filename}" a
 
   	SetOutPath $INSTDIR	
-	; ADD FILES HERE
-	
+
 	writepluginfile:
 	File "${filename}"
 	IfErrors 0 checkversion
