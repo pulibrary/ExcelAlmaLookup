@@ -232,6 +232,8 @@ Private Sub OKButton_Click()
                             sType = "001"
                         ElseIf sType = "ISBN" Then
                             sType = "020"
+                        ElseIf sType = "ISSN" Then
+                            sType = "022"
                         ElseIf sType = "Title" Then
                             sType = "245"
                         ElseIf sType = "Call No." Then
@@ -242,8 +244,9 @@ Private Sub OKButton_Click()
                             sType = "008(35,3)"
                         ElseIf sType = "Coverage" Then
                             sType = "AVA$t|AVE$s"
-                        ElseIf sType = "Leader" Then
-                            sType = "000"
+                        ElseIf InStr(1, sType, "Leader") = 1 Or InStr(1, sType, "LDR") Then
+                            sType = Replace(sType, "Leader", "000")
+                            sType = Replace(sType, "LDR", "000")
                         ElseIf sType = "True/False" Then
                             sType = "exists"
                         End If

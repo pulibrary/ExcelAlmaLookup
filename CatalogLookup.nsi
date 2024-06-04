@@ -27,6 +27,7 @@ InstallDirRegKey HKCU "Software\${displayname}" "InstallDir" ;
 ; Interface Settings
 !define MUI_ABORTWARNING
 
+
 ;Prerequisites section
 
 Section "-Prerequisites"
@@ -36,10 +37,20 @@ SetOverwrite On
 
 ; Installer Section
 Section "-Install"
+ 	ClearErrors
+	SetOverwrite try
+  	FileOpen $0 "${filename}" a
+
   	SetOutPath $INSTDIR	
 	; ADD FILES HERE
+	
+	writepluginfile:
 	File "${filename}"
+	IfErrors 0 checkversion
+	MessageBox MB_RETRYCANCEL "The plugin file could not be written.  Please make sure Excel is not currently running.  If it is, close it and click 'Retry'." IDRETRY writepluginfile
+	Abort "Installation failed: Plugin file could not be written."
 
+	checkversion:
 	; Check Installed Excel Version
 	ReadRegStr $1 HKCR "Excel.Application\CurVer" ""
 

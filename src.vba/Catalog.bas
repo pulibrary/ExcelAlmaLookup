@@ -10,7 +10,7 @@ Global sCatalogURL As String
 Global sAuth As String
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.1.2"
+Public Const sVersion = "v1.2.0"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 
 'Initialize global objects
@@ -274,6 +274,7 @@ Sub PopulateCombos()
     LookupDialog.ResultTypeCombo.AddItem "True/False"
     LookupDialog.ResultTypeCombo.AddItem "MMS ID"
     LookupDialog.ResultTypeCombo.AddItem "ISBN"
+    LookupDialog.ResultTypeCombo.AddItem "ISSN"
     LookupDialog.ResultTypeCombo.AddItem "Title"
     LookupDialog.ResultTypeCombo.AddItem "Language code"
     LookupDialog.ResultTypeCombo.AddItem "Leader"
@@ -645,12 +646,27 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                  ExtractField = ExtractField & ChrW(166)
               End If
               sResultType = aResultFields(h)
+              
               sResultFilter = ""
               iFilterPos = InStr(1, sResultType, "#")
               If iFilterPos > 0 Then
                 sResultFilter = Mid(sResultType, iFilterPos + 1)
                 sResultType = Left(sResultType, iFilterPos - 1)
               End If
+              
+              iSubStartPos = -1
+              iSubLength = -1
+              oRegEx.Pattern = "\(([0-9]+),([0-9]+)\)$"
+              Set oMatch = oRegEx.Execute(sResultType)
+              If oMatch.Count = 1 Then
+                iSubStartPos = oMatch(0).Submatches(0)
+                iSubLength = oMatch(0).Submatches(1)
+                If iSubLength = 0 Then
+                    iSubLength = 9999
+                End If
+                sResultType = Left(sResultType, Len(sResultType) - Len(oMatch.Item(0)))
+              End If
+              
               sBibPrefix = "marc:datafield"
                If sResultType = "000" Then
                   sBibPrefix = "marc:leader"
@@ -693,9 +709,17 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                          End If
                          sRecord = sRecord & oFieldList.Item(j).XML
                        Next j
-                    
-                       oRegEx.Pattern = "<subfield code=.6.>[^<]*</subfield>"
-                       sRecord = oRegEx.Replace(sRecord, "")
+                       If LookupDialog.IncludeExtrasCheckbox.Value = True Then
+                           oRegEx.Pattern = "<subfield code=.(.).>"
+                           sRecord = oRegEx.Replace(sRecord, "$$$1 ")
+                           sRecord = Replace(sRecord, "ind1="" """, "ind1=""_""")
+                           sRecord = Replace(sRecord, "ind2="" """, "ind2=""_""")
+                           oRegEx.Pattern = "<datafield[^>]*\s*ind1=.(.).\s*ind2=.(.).[^>]*>"
+                           sRecord = oRegEx.Replace(sRecord, "$1$2")
+                       Else
+                          oRegEx.Pattern = "<subfield code=.6.>[^<]*</subfield>"
+                          sRecord = oRegEx.Replace(sRecord, "")
+                       End If
                        oRegEx.Pattern = "<[^>]*>"
                        sRecord = oRegEx.Replace(sRecord, " ")
                        oRegEx.Pattern = "^\s+"
@@ -706,20 +730,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                           oRegEx.Pattern = "\s\s+"
                           sRecord = oRegEx.Replace(sRecord, " ")
                        End If
-                    ElseIf sResultType Like "00#(*,*)" Then
-                       sField = Left(sResultType, 3)
-                       iSubStart = Mid(sResultType, 5, InStr(1, sResultType, ",") - 5)
-                       iSubLen = Mid(sResultType, InStr(1, sResultType, ",") + 1)
-                       iSubLen = Left(iSubLen, Len(iSubLen) - 1)
-                       Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='" & sField & "']")
-                       If Not oFieldList Is Nothing Then
-                         sRecord = oFieldList.Item(0).XML
-                         oRegEx.Pattern = "<[^>]*>"
-                         sRecord = oRegEx.Replace(sRecord, " ")
-                         oRegEx.Pattern = "^\s+"
-                         sRecord = oRegEx.Replace(sRecord, "")
-                         sRecord = Mid(sRecord, iSubStart + 1, iSubLen)
-                       End If
                      ElseIf sResultType Like "###-880" Then
                         sMainField = Left(sResultType, 3)
                         Set oFieldList = aRecords(i).SelectNodes(sBibPrefix & "[@tag='880'][marc:subfield[@code='6' and starts-with(text(),'" & sMainField & "')]]")
@@ -729,8 +739,17 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                           End If
                           sRecord = sRecord & oFieldList.Item(j).XML
                         Next j
-                        oRegEx.Pattern = "<subfield code=.6.>[^<]*</subfield>"
-                        sRecord = oRegEx.Replace(sRecord, "")
+                        If LookupDialog.IncludeExtrasCheckbox.Value = True Then
+                           oRegEx.Pattern = "<subfield code=.(.).>"
+                           sRecord = oRegEx.Replace(sRecord, "$$$1 ")
+                           sRecord = Replace(sRecord, "ind1="" """, "ind1=""_""")
+                           sRecord = Replace(sRecord, "ind2="" """, "ind2=""_""")
+                           oRegEx.Pattern = "<datafield[^>]*\s*ind1=.(.).\s*ind2=.(.).[^>]*>"
+                           sRecord = oRegEx.Replace(sRecord, "$1$2")
+                        Else
+                           oRegEx.Pattern = "<subfield code=.6.>[^<]*</subfield>"
+                           sRecord = oRegEx.Replace(sRecord, "")
+                        End If
                         oRegEx.Pattern = "<[^>]*>"
                         sRecord = oRegEx.Replace(sRecord, " ")
                         oRegEx.Pattern = "^\s+"
@@ -801,6 +820,19 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                       End If
                       oRegEx.Pattern = " \u00A6 "
                       sRecord = Trim(oRegEx.Replace(sRecord, ChrW(166)))
+                      
+                      If iSubStartPos > -1 And iSubLength > 0 Then
+                         sRecordFiltered = ""
+                         aResults = Split(sRecord, ChrW(166), -1, 0)
+                         For j = 0 To UBound(aResults)
+                            If sRecordFiltered <> "" Then
+                                sRecordFiltered = sRecordFiltered & ChrW(166)
+                            End If
+                            sRecordFiltered = sRecordFiltered & Mid(aResults(j), iSubStartPos + 1, iSubLength)
+                         Next j
+                         sRecord = sRecordFiltered
+                      End If
+                      
                       If sResultFilter <> "" Then
                          sRecordFiltered = ""
                          aResults = Split(sRecord, ChrW(166), -1, 0)
