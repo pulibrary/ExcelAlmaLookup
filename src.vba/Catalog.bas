@@ -274,7 +274,7 @@ Sub PopulateCombos()
     LookupDialog.ResultTypeCombo.AddItem "True/False"
     LookupDialog.ResultTypeCombo.AddItem "MMS ID"
     LookupDialog.ResultTypeCombo.AddItem "ISBN"
-    LookupDialog.ResultTypeCombo.AddItem "ISSN"
+    'LookupDialog.ResultTypeCombo.AddItem "ISSN"
     LookupDialog.ResultTypeCombo.AddItem "Title"
     LookupDialog.ResultTypeCombo.AddItem "Language code"
     LookupDialog.ResultTypeCombo.AddItem "Leader"
