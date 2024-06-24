@@ -25,22 +25,28 @@ Public Const sWCZhost = "zcat.oclc.org"
 Public Const sWCZport = 210
 Public Const sWCZDB = "OLUCWorldCat"
 
+Public Const sPluginDir = "Excel Local Catalog Lookup"
+Public Const sYAZdll = "yaz5"
+
 Private Declare PtrSafe Sub CopyMemory Lib "ntdll" Alias "RtlCopyMemory" (Destination As Any, Source As Any, ByVal length As Long)
+Private Declare PtrSafe Function SetDefaultDllDirectories Lib "kernel32" (ByVal dwFlags As Long) As LongPtr
+Private Declare PtrSafe Function AddDllDirectory Lib "kernel32" (ByVal lpLibDirectory As String) As LongPtr
+Private Declare PtrSafe Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As LongPtr
 
-Private Declare PtrSafe Function ZOOM_connection_create Lib "YAZ5.dll" (ByVal Options As Integer) As LongPtr
-Private Declare PtrSafe Sub ZOOM_connection_connect Lib "YAZ5.dll" (ByVal c As LongPtr, ByVal Host As String, ByVal portnum As Integer)
-Private Declare PtrSafe Function ZOOM_connection_option_get Lib "YAZ5.dll" (ByVal c As LongPtr, ByVal key As String) As LongPtr
-Private Declare PtrSafe Sub ZOOM_connection_option_set Lib "YAZ5.dll" (ByVal c As LongPtr, ByVal key As String, ByVal val As String)
-Private Declare PtrSafe Sub ZOOM_connection_destroy Lib "YAZ5.dll" (ByVal c As LongPtr)
-Private Declare PtrSafe Function ZOOM_connection_errcode Lib "YAZ5.dll" (ByVal c As LongPtr) As LongPtr
-Private Declare PtrSafe Function ZOOM_connection_search_pqf Lib "YAZ5.dll" (ByVal c As LongPtr, ByVal q As String) As LongPtr
+Private Declare PtrSafe Function ZOOM_connection_create Lib "yaz5.dll" (ByVal Options As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_connection_connect Lib "yaz5.dll" (ByVal c As LongPtr, ByVal Host As String, ByVal portnum As Integer)
+Private Declare PtrSafe Function ZOOM_connection_option_get Lib "yaz5.dll" (ByVal c As LongPtr, ByVal key As String) As LongPtr
+Private Declare PtrSafe Sub ZOOM_connection_option_set Lib "yaz5.dll" (ByVal c As LongPtr, ByVal key As String, ByVal val As String)
+Private Declare PtrSafe Sub ZOOM_connection_destroy Lib "yaz5.dll" (ByVal c As LongPtr)
+Private Declare PtrSafe Function ZOOM_connection_errcode Lib "yaz5.dll" (ByVal c As LongPtr) As LongPtr
+Private Declare PtrSafe Function ZOOM_connection_search_pqf Lib "yaz5.dll" (ByVal c As LongPtr, ByVal q As String) As LongPtr
 
-Private Declare PtrSafe Function ZOOM_resultset_size Lib "YAZ5.dll" (ByVal r As LongPtr) As Integer
-Private Declare PtrSafe Function ZOOM_resultset_record Lib "YAZ5.dll" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
-Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "YAZ5.dll" (ByVal r As LongPtr)
+Private Declare PtrSafe Function ZOOM_resultset_size Lib "yaz5.dll" (ByVal r As LongPtr) As Integer
+Private Declare PtrSafe Function ZOOM_resultset_record Lib "yaz5.dll" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
-Private Declare PtrSafe Function ZOOM_record_get Lib "YAZ5.dll" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Integer) As LongPtr
-Private Declare PtrSafe Sub ZOOM_record_destroy Lib "YAZ5.dll" (ByVal r As LongPtr)
+Private Declare PtrSafe Function ZOOM_record_get Lib "yaz5.dll" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_record_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
 'Initialize global objects
 Private Sub Initialize()
@@ -54,9 +60,13 @@ Private Sub Initialize()
     Set oRegistry = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
     Set oXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
-    Set oConverter = CreateObject("ADODB.Stream")
     oXMLDOM.SetProperty "SelectionLanguage", "XPath"
+    Set oConverter = CreateObject("ADODB.Stream")
     
+    SetDefaultDllDirectories (&H1000&)
+    sDllPath = StrConv(Environ("AppData") & "\" & sPluginDir & "\", vbUnicode)
+    AddDllDirectory (sDllPath)
+    LoadLibrary (sYAZdll)
     Exit Sub
 ErrHandler:
     MsgBox ("There was an error initializing the plugin.  Please try again.")

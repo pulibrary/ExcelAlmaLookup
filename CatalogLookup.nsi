@@ -6,7 +6,9 @@ RequestExecutionLevel user
 
 ; General
 !define filename "CatalogLookup.xlam"
-!define yazdll "YAZ5.dll"
+!define yazdll "yaz5.dll"
+!define libxml2 "libxml2.dll"
+!define libxslt "libxslt.dll"
 !define displayname "Excel Local Catalog Lookup"
 
 Name "${displayname}"
@@ -41,6 +43,8 @@ Section "-Install"
 	; ADD FILES HERE
 	File "${filename}"
 	File "${yazdll}"
+	File "${libxml2}"
+	File "${libxslt}"
 
 	; Check Installed Excel Version
 	ReadRegStr $1 HKCR "Excel.Application\CurVer" ""
@@ -94,6 +98,8 @@ StrCpy $INSTDIR "$APPDATA\${displayname}"
 ; ADD FILES HERE...
 Delete "$INSTDIR\${filename}"
 Delete "$INSTDIR\${yazdll}"
+Delete "$INSTDIR\${libxml2}"
+Delete "$INSTDIR\${libxslt}"
 Delete "$INSTDIR\uninstall.exe"
 
 RMDir "$INSTDIR"
