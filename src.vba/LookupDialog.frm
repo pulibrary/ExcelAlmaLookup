@@ -170,6 +170,12 @@ Private Sub OKButton_Click()
     End If
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
+    If sCatalogURL = "source:worldcat" Then
+        bSuccess = Catalog.Z3950Connect(sCatalogURL)
+        If Not bSuccess Then
+            Exit Sub
+        End If
+    End If
     Catalog.SetRegistryURLsFromCombo
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
@@ -243,6 +249,8 @@ Private Sub OKButton_Click()
                             stype = "001"
                         ElseIf stype = "ISBN" Then
                             stype = "020"
+                        ElseIf stype = "ISSN" Then
+                            stype = "022"
                         ElseIf stype = "Title" Then
                             stype = "245"
                         ElseIf stype = "OCLC No." Then
@@ -255,8 +263,9 @@ Private Sub OKButton_Click()
                             stype = "008(35,3)"
                         ElseIf stype = "Coverage" Then
                             stype = "AVA$t|AVE$s"
-                        ElseIf stype = "Leader" Then
-                            stype = "000"
+                        ElseIf InStr(1, stype, "Leader") = 1 Or InStr(1, stype, "LDR") Then
+                            stype = Replace(stype, "Leader", "000")
+                            stype = Replace(stype, "LDR", "000")
                         ElseIf stype = "True/False" Then
                             stype = "exists"
                         ElseIf stype = "ReCAP Holdings" Then
