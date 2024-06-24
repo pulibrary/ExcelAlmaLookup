@@ -93,7 +93,7 @@ Section "Uninstall"
 StrCpy $INSTDIR "$APPDATA\${displayname}"
 ; ADD FILES HERE...
 Delete "$INSTDIR\${filename}"
-Delete "$INSTDIR\${yazdll}
+Delete "$INSTDIR\${yazdll}"
 Delete "$INSTDIR\uninstall.exe"
 
 RMDir "$INSTDIR"
