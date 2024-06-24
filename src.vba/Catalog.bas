@@ -45,7 +45,7 @@ Private Declare PtrSafe Function ZOOM_resultset_size Lib "yaz5.dll" (ByVal r As 
 Private Declare PtrSafe Function ZOOM_resultset_record Lib "yaz5.dll" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
 Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
-Private Declare PtrSafe Function ZOOM_record_get Lib "yaz5.dll" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Integer) As LongPtr
+Private Declare PtrSafe Function ZOOM_record_get Lib "yaz5.dll" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Long) As LongPtr
 Private Declare PtrSafe Sub ZOOM_record_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
 'Initialize global objects
@@ -336,6 +336,8 @@ Sub PopulateSourceDependentOptions()
     LookupDialog.ResultTypeCombo.AddItem "True/False"
     If Catalog.bIsAlma Then
         LookupDialog.ResultTypeCombo.AddItem "MMS ID"
+    ElseIf LookupDialog.CatalogURLBox = "source:worldcat" Then
+        LookupDialog.ResultTypeCombo.AddItem "OCLC No."
     Else
         LookupDialog.ResultTypeCombo.AddItem "Catalog ID"
     End If
@@ -367,10 +369,22 @@ Sub PopulateSourceDependentOptions()
     End If
     
     If Not bIsAlma Then
+        LookupDialog.SearchFieldCombo.Style = 2 'fmStyleDropDownList
+        If LookupDialog.CatalogURLBox = "source:worldcat" Then
+            LookupDialog.SearchFieldCombo.Enabled = True
+            LookupDialog.SearchFieldCombo.Clear
+            LookupDialog.SearchFieldCombo.AddItem "Keywords"
+            LookupDialog.SearchFieldCombo.AddItem "Title"
+            LookupDialog.SearchFieldCombo.AddItem "ISBN"
+            LookupDialog.SearchFieldCombo.AddItem "ISSN"
+            LookupDialog.SearchFieldCombo.AddItem "OCLC No."
+        Else
+            LookupDialog.SearchFieldCombo.Enabled = False
+        End If
         LookupDialog.SearchFieldCombo.Value = "Keywords"
-        LookupDialog.SearchFieldCombo.Enabled = False
         LookupDialog.AdditionalFieldsButton.Enabled = False
     Else
+        LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
         LookupDialog.SearchFieldCombo.Enabled = True
         LookupDialog.AdditionalFieldsButton.Enabled = True
     End If
@@ -723,7 +737,7 @@ Function Z3950Connect(sSource As String) As Boolean
     Z3950Connect = True
 End Function
 
-Function Z3950Search(sQuery As String, sSource As String)
+Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
     If oZConn = 0 Then
         bSuccess = Z3950Connect(sSource)
         If Not bSuccess Then
@@ -731,7 +745,21 @@ Function Z3950Search(sQuery As String, sSource As String)
             Exit Function
         End If
     End If
-    zrs = ZOOM_connection_search_pqf(oZConn, "@attr 1=1016 " & sQuery)
+    
+    sSearchIndex = "1016"
+    If sSearchType = "Title" Then
+        sSearchIndex = "4"
+    ElseIf sSearchType = "ISBN" Then
+        sSearchIndex = "7"
+    ElseIf sSearchType = "ISSN" Then
+        sSearchIndex = "8"
+    ElseIf sSearchType = "OCLC No." Then
+        sSearchIndex = "12"
+    End If
+    
+    sQuery = Replace(sQuery, """", "\""")
+    
+    zrs = ZOOM_connection_search_pqf(oZConn, "@attr 1=" & sSearchIndex & "  """ & sQuery & """")
     zcount = ZOOM_resultset_size(zrs)
     If zcount > 0 Then
         sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
@@ -741,7 +769,7 @@ Function Z3950Search(sQuery As String, sSource As String)
         For i = 0 To zcount - 1
             zrec = ZOOM_resultset_record(zrs, i)
             Dim zptr As LongPtr
-            Dim zsize As Integer
+            Dim zsize As Long
             zptr = ZOOM_record_get(zrec, "xml;charset=marc8,utf8", zsize)
             Dim recBytes() As Byte
             ReDim recBytes(zsize)
@@ -795,7 +823,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     sResponse = ""
 
     If sURL = "z3950" Then
-        sResponse = Z3950Search(sQuery1, sCatalogURL)
+        sResponse = Z3950Search(sQuery1, sSearchType, sCatalogURL)
     Else
         With oXMLHTTP
             .Open "GET", sURL, True

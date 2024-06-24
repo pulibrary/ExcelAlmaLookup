@@ -245,7 +245,8 @@ Private Sub OKButton_Click()
                         Dim stype As String
                         stype = LookupDialog.ResultTypeList.List(j)
                         stype = Replace(stype, "*", "")
-                        If stype = "MMS ID" Or stype = "Catalog ID" Then
+                        If stype = "MMS ID" Or stype = "Catalog ID" Or _
+                            (LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "OCLC No.") Then
                             stype = "001"
                         ElseIf stype = "ISBN" Then
                             stype = "020"
@@ -254,6 +255,7 @@ Private Sub OKButton_Click()
                         ElseIf stype = "Title" Then
                             stype = "245"
                         ElseIf stype = "OCLC No." Then
+                            
                             stype = "035$a#(OCoLC)"
                         ElseIf stype = "Call No." Then
                             stype = "AVA$d"
