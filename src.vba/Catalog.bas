@@ -746,20 +746,42 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
         End If
     End If
     
+    oConverter.Open
+    oConverter.Charset = "UTF-8"
+    oConverter.Type = 2
+    oConverter.WriteText sQuery
+    oConverter.Position = 0
+    oConverter.Charset = "ISO-8859-1"
+    sQuery = oConverter.ReadText
+    sQuery = Replace(sQuery, "ï»¿", "") 'BOM
+    oConverter.Close
+    
     sSearchIndex = "1016"
     If sSearchType = "Title" Then
         sSearchIndex = "4"
     ElseIf sSearchType = "ISBN" Then
         sSearchIndex = "7"
+        sQuery = NormalizeISBN(sQuery)
     ElseIf sSearchType = "ISSN" Then
         sSearchIndex = "8"
+        sQuery = NormalizeISSN(sQuery)
     ElseIf sSearchType = "OCLC No." Then
         sSearchIndex = "12"
+        sQuery = NormalizeOCLC(sQuery)
     End If
     
     sQuery = Replace(sQuery, """", "\""")
     
-    zrs = ZOOM_connection_search_pqf(oZConn, "@attr 1=" & sSearchIndex & "  """ & sQuery & """")
+    sCQLQuery = ""
+    aSearchKeys = Split(sQuery, "|")
+    For i = 0 To UBound(aSearchKeys)
+        If sCQLQuery <> "" Then
+            sCQLQuery = "@or " & sCQLQuery
+        End If
+        sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
+    Next i
+
+    zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
     zcount = ZOOM_resultset_size(zrs)
     If zcount > 0 Then
         sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
@@ -1411,6 +1433,18 @@ Function GenerateCheckDigit(sISXN As String)
     Else
         GenerateCheckDigit = sISXN
     End If
+End Function
+
+Function NormalizeOCLC(sQuery As String) As String
+    Set oRegEx = CreateObject("vbscript.regexp")
+    With oRegEx
+       .MultiLine = False
+        .Global = True
+        .IgnoreCase = True
+    End With
+    oRegEx.Pattern = "[^0-9]"
+    sQuery = oRegEx.Replace(sQuery, "")
+    NormalizeOCLC = sQuery
 End Function
 
 Function NormalizeISSN(sQuery As String) As String
