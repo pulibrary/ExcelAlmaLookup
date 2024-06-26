@@ -368,6 +368,10 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.AddItem "IPLC ReShare Holdings"
     End If
     
+    If LookupDialog.CatalogURLBox = "source:worldcat" Then
+        LookupDialog.ResultTypeCombo.AddItem "WorldCat Holdings"
+    End If
+    
     If Not bIsAlma Then
         LookupDialog.SearchFieldCombo.Style = 2 'fmStyleDropDownList
         If LookupDialog.CatalogURLBox = "source:worldcat" Then
@@ -708,6 +712,7 @@ Function Z3950Connect(sSource As String) As Boolean
         oZConn = ZOOM_connection_create(0)
         ZOOM_connection_option_set oZConn, "databaseName", sZDB
         ZOOM_connection_option_set oZConn, "preferredRecordSyntax", "USmarc"
+        ZOOM_connection_option_set oZConn, "elementSetName", "FA"
         ZOOM_connection_option_set oZConn, "user", sZUserName
         ZOOM_connection_option_set oZConn, "password", sZPassword
         ZOOM_connection_connect oZConn, sZHost, sZPort

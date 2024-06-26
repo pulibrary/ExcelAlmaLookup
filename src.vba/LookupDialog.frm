@@ -274,6 +274,8 @@ Private Sub OKButton_Click()
                             stype = "recap"
                         ElseIf stype = "IPLC ReShare Holdings" Then
                             stype = "999$sp"
+                        ElseIf stype = "WorldCat Holdings" Then
+                            stype = "948$c"
                         End If
                         If sResultRec = "" Then
                             sResult = ""
