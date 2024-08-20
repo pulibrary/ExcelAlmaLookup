@@ -78,9 +78,7 @@ A small dialog box will show the progress of the query.  You can terminate it at
 
 ### Reporting Bugs and Making Suggestions
 
-If you encounter any problems with this tool or would like to request new features, please go to the "Issues" tab at the top of this github page, and click the "New Issue" button.  Alternatively, you can provide feedback using the form below. (Please select the option "Feedback regarding website or software tools".)
-
-https://library.princeton.edu/eastasian/contact
+If you encounter any problems with this tool or would like to request new features, please go to the "Issues" tab at the top of this github page, and click the "New Issue" button.  
 
 ## Example
 This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
