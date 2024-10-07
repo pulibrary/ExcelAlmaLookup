@@ -11,7 +11,7 @@ Download the installer here:
 
 <a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
 
-Simply run the installer as the user who will be using the plugin (and be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Local Catalog”. 
+Simply run the installer as the user who will be using the plugin (and be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Catalog”. 
 
 <img src='./img/ribbon.jpg'>
 
