@@ -1,3 +1,11 @@
+Attribute VB_Name = "LookupDialog"
+Attribute VB_Base = "0{4638F9FF-4520-4CBA-AC9D-24B58A843FA9}{2ECD3780-9341-426E-9FBB-A63D0AC313F8}"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Attribute VB_TemplateDerived = False
+Attribute VB_Customizable = False
 Private Sub AdditionalFieldsButton_Click()
     Catalog.aExplainFields = Catalog.GetAllFields()
     AdditionalFieldsDialog.FilterBox.Value = ""
@@ -111,6 +119,14 @@ Private Sub HelpButton_Click()
     ThisWorkbook.FollowHyperlink Catalog.sRepoURL & "#readme"
 End Sub
 
+Private Sub IgnoreHeaderCheckbox_Click()
+    If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+        LookupDialog.GenerateHeaderCheckBox.Enabled = True
+    Else
+        LookupDialog.GenerateHeaderCheckBox.Enabled = False
+    End If
+End Sub
+
 Private Sub LoadSetButton_Click()
     If LookupDialog.FieldSetList.ListIndex < 0 Then
         MsgBox ("Please select a set name")
@@ -195,11 +211,12 @@ Private Sub OKButton_Click()
         Next i
     End If
     'Validate selected range, truncate to part containing actual data
-    Set oSourceRange = Range(LookupRange.Value)
+    
+    Set oSourceRange = Workbooks(Catalog.sFileName).Worksheets(Catalog.sSheetName).Range(LookupRange.Value)
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
         With oSourceRange
-            iRowCount = oSourceRange.Rows.Count
+            iRowCount = .Rows.Count
             iSourceColumn = .Cells(1, 1).Column
             iFirstSourceRow = .Cells(1, 1).Row
             If LookupRange.Value Like "*#*" Then
@@ -211,24 +228,26 @@ Private Sub OKButton_Click()
                 iLastSourceRow = iFirstSourceRow + .Rows.Count - 1
             End If
         End With
-        If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
-            iFirstSourceRow = iFirstSourceRow + 1
-            iRowCount = iRowCount - 1
-        End If
+        iStartIndex = 1
+        'If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+        '    iStartIndex = 2
+        '    iRowCount = iRowCount - 1
+        'End If
         Catalog.bTerminateLoop = False
         iTotal = iLastSourceRow - iFirstSourceRow + 1
         SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
         SearchingDialog.Show
         'Iterate through rows, look up in catalog
-        For i = iFirstSourceRow To iLastSourceRow
+        For i = iStartIndex To iTotal
             If Catalog.bTerminateLoop = True Then
                 Exit For
             End If
-            If Not Rows(i).EntireRow.Hidden Then
-                SearchingDialog.ProgressLabel = "Row " & (i - iFirstSourceRow + 1) & " of " & iTotal
+            If Not oSourceRange.Rows(i).EntireRow.Hidden Then
+                SearchingDialog.ProgressLabel = "Row " & i & " of " & iTotal
                 Application.ScreenUpdating = False
                 Dim sSearchString As String
-                sSearchString = Cells(i, iSourceColumn).Value
+                sSearchString = oSourceRange.Cells(i, 1).Value
+                ' sSearchString
                 If sSearchString <> "" Then
                     If sSearchString = "FALSE" Then
                         sResultRec = ""
@@ -245,6 +264,13 @@ Private Sub OKButton_Click()
                         Dim stype As String
                         stype = LookupDialog.ResultTypeList.List(j)
                         stype = Replace(stype, "*", "")
+                        If i = 1 And LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+                            sResult = ""
+                            If LookupDialog.GenerateHeaderCheckBox.Value = True Then
+                                sResult = stype
+                            End If
+                            GoTo NextRow
+                        End If
                         If stype = "MMS ID" Or stype = "Catalog ID" Or _
                             (LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "OCLC No.") Then
                             stype = "001"
@@ -279,9 +305,19 @@ Private Sub OKButton_Click()
                         End If
                         If sResultRec = "" Then
                             sResult = ""
+                        ElseIf sResultRec = "INVALID" Then
+                            sResult = "INVALID"
                         Else
                             If stype = "Barcode" Then
                                 sResult = ExtractField(stype, CStr(sResultHold), True)
+                            ElseIf stype = "Item Location" Or stype = "Item Enum/Chron" Or stype = "Shelf Locator" Then
+                                sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
+                                sBarcode = ""
+                                If sSearchType = "Barcode" Or sSearchType = "alma.barcode" Then
+                                    sResult = ExtractField(stype, CStr(sResultHold), True, sSearchString)
+                                Else
+                                    sResult = ExtractField(stype, CStr(sResultHold), True)
+                                End If
                             Else
                                 sResult = ExtractField(stype, CStr(sResultRec), False)
                                 If sResult = "ERROR:InvalidRecap" Then
@@ -301,16 +337,19 @@ Private Sub OKButton_Click()
                         If sResult = "" Then
                             sResult = False
                         End If
-                        Cells(i, iResultColumn + j).NumberFormat = "@"
-                        Cells(i, iResultColumn + j).Value = sResult
+NextRow:
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = sResult
                     Next j
                 End If
-                minRow = ActiveWindow.VisibleRange.Row
-                maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
-                If i <= minRow + 1 Or i >= maxRow - 1 Then
-                    ActiveWindow.SmallScroll down:=(i - (maxRow + minRow) / 2) + 1
+                If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then
+                    minRow = ActiveWindow.VisibleRange.Row
+                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
+                    If iFirstSourceRow + i <= minRow + 1 Or iFirstSourceRow + i >= maxRow - 1 Then
+                        ActiveWindow.SmallScroll down:=(iFirstSourceRow + i - (maxRow + minRow) / 2) + 1
+                    End If
+                    Application.ScreenUpdating = True
                 End If
-                Application.ScreenUpdating = True
                 DoEvents
             End If
         Next i

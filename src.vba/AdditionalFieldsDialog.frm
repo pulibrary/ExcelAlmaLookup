@@ -1,3 +1,11 @@
+Attribute VB_Name = "AdditionalFieldsDialog"
+Attribute VB_Base = "0{82BCED4D-71D7-4F3A-8179-D0DF4404BD80}{D3F26FA0-7EFC-41CB-B20C-AFC51D0B6C8D}"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Attribute VB_TemplateDerived = False
+Attribute VB_Customizable = False
 Private Sub PopulateSearchField()
     i = AdditionalFieldsDialog.SRUFields.ListIndex
     If i = -1 Then

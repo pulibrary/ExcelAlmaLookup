@@ -1,3 +1,4 @@
+Attribute VB_Name = "Catalog"
 Global oRegEx As Object
 Global oXMLHTTP As Object
 Global oXMLDOM As Object
@@ -13,6 +14,9 @@ Global bIsAlma As Boolean
 Global sCatalogURL As String
 Global sAuth As String
 
+Global sFileName As String
+Global sSheetName As String
+
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
 Public Const sVersion = "v1.3.0"
@@ -21,6 +25,8 @@ Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
 Public Const sIPLCReshareURL = "https://borrowdirect.reshare.indexdata.com/api/v1/search?type=AllFields&field%5B%5D=fullRecord&lookfor="
 
+Public Const iMaximumRecords = 25
+
 Public Const sWCZhost = "zcat.oclc.org"
 Public Const sWCZport = 210
 Public Const sWCZDB = "OLUCWorldCat"
@@ -28,6 +34,8 @@ Public Const sWCZDB = "OLUCWorldCat"
 Public Const sPluginDir = "Excel Local Catalog Lookup"
 Public Const sYAZdll = "yaz5"
 
+#If Win64 Then
+Public Const sDllVersion = "x64"
 Private Declare PtrSafe Sub CopyMemory Lib "ntdll" Alias "RtlCopyMemory" (Destination As Any, Source As Any, ByVal length As Long)
 Private Declare PtrSafe Function SetDefaultDllDirectories Lib "kernel32" (ByVal dwFlags As Long) As LongPtr
 Private Declare PtrSafe Function AddDllDirectory Lib "kernel32" (ByVal lpLibDirectory As String) As LongPtr
@@ -43,10 +51,35 @@ Private Declare PtrSafe Function ZOOM_connection_search_pqf Lib "yaz5.dll" (ByVa
 
 Private Declare PtrSafe Function ZOOM_resultset_size Lib "yaz5.dll" (ByVal r As LongPtr) As Integer
 Private Declare PtrSafe Function ZOOM_resultset_record Lib "yaz5.dll" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_resultset_option_set Lib "yaz5.dll" (ByVal r As LongPtr, ByVal key As String, ByVal val As String)
 Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
 Private Declare PtrSafe Function ZOOM_record_get Lib "yaz5.dll" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Long) As LongPtr
 Private Declare PtrSafe Sub ZOOM_record_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
+
+#Else
+Public Const sDllVersion = "x86"
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal length As Long)
+Private Declare PtrSafe Function SetDefaultDllDirectories Lib "kernel32" (ByVal dwFlags As Long) As LongPtr
+Private Declare PtrSafe Function AddDllDirectory Lib "kernel32" (ByVal lpLibDirectory As String) As LongPtr
+Private Declare PtrSafe Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As LongPtr
+
+Private Declare PtrSafe Function ZOOM_connection_create Lib "yaz5.dll" Alias "_ZOOM_connection_create@4" (ByVal Options As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_connection_connect Lib "yaz5.dll" Alias "_ZOOM_connection_connect@12" (ByVal c As LongPtr, ByVal Host As String, ByVal portnum As Integer)
+Private Declare PtrSafe Function ZOOM_connection_option_get Lib "yaz5.dll" Alias "_ZOOM_connection_option_get@8" (ByVal c As LongPtr, ByVal key As String) As LongPtr
+Private Declare PtrSafe Sub ZOOM_connection_option_set Lib "yaz5.dll" Alias "_ZOOM_connection_option_set@12" (ByVal c As LongPtr, ByVal key As String, ByVal val As String)
+Private Declare PtrSafe Sub ZOOM_connection_destroy Lib "yaz5.dll" Alias "_ZOOM_connection_destroy@4" (ByVal c As LongPtr)
+Private Declare PtrSafe Function ZOOM_connection_errcode Lib "yaz5.dll" Alias "_ZOOM_connection_errcode@4" (ByVal c As LongPtr) As LongPtr
+Private Declare PtrSafe Function ZOOM_connection_search_pqf Lib "yaz5.dll" Alias "_ZOOM_connection_search_pqf@8" (ByVal c As LongPtr, ByVal q As String) As LongPtr
+
+Private Declare PtrSafe Function ZOOM_resultset_size Lib "yaz5.dll" Alias "_ZOOM_resultset_size@4" (ByVal r As LongPtr) As Integer
+Private Declare PtrSafe Function ZOOM_resultset_record Lib "yaz5.dll" Alias "_ZOOM_resultset_record@8" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
+Private Declare PtrSafe Sub ZOOM_resultset_option_set Lib "yaz5.dll" Alias "_ZOOM_resultset_option_set@12" (ByVal r As LongPtr, ByVal key As String, ByVal val As String)
+Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "yaz5.dll" Alias "_ZOOM_resultset_destroy@4" (ByVal r As LongPtr)
+
+Private Declare PtrSafe Function ZOOM_record_get Lib "yaz5.dll" Alias "_ZOOM_record_get@12" (ByVal r As LongPtr, ByVal typ As String, ByRef size As Long) As LongPtr
+Private Declare PtrSafe Sub ZOOM_record_destroy Lib "yaz5.dll" Alias "_ZOOM_record_destroy@4" (ByVal r As LongPtr)
+#End If
 
 'Initialize global objects
 Private Sub Initialize()
@@ -64,7 +97,7 @@ Private Sub Initialize()
     Set oConverter = CreateObject("ADODB.Stream")
     
     SetDefaultDllDirectories (&H1000&)
-    sDllPath = StrConv(Environ("AppData") & "\" & sPluginDir & "\", vbUnicode)
+    sDllPath = StrConv(Environ("AppData") & "\" & sPluginDir & "\" & sDllVersion & "\", vbUnicode)
     AddDllDirectory (sDllPath)
     LoadLibrary (sYAZdll)
     Exit Sub
@@ -117,8 +150,14 @@ Sub LookupInterface(control As IRibbonControl)
     
     PopulateCombos
     RedrawButtons
+    
+    sFileName = ActiveWorkbook.Name
+    sSheetName = ActiveSheet.Name
+        
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
-    LookupDialog.LookupRange.Value = Selection.Address
+    sSourceRange = Selection.Address
+    LookupDialog.LookupRange.Value = sSourceRange
+    
     
     sLatestVersion = GetLatestVersionNumber
     If sLatestVersion = sVersion Then
@@ -302,18 +341,6 @@ Sub PopulateCombos()
             LookupDialog.FieldSetList.AddItem aFields(0)
         Next i
     End If
-
-    LookupDialog.SearchFieldCombo.Clear
-    LookupDialog.ResultTypeCombo.Clear
-        
-    LookupDialog.SearchFieldCombo.AddItem "Keywords"
-    LookupDialog.SearchFieldCombo.AddItem "Call No."
-    LookupDialog.SearchFieldCombo.AddItem "Title"
-    LookupDialog.SearchFieldCombo.AddItem "ISBN"
-    LookupDialog.SearchFieldCombo.AddItem "ISSN"
-    LookupDialog.SearchFieldCombo.AddItem "MMS ID"
-    LookupDialog.SearchFieldCombo.AddItem "Barcode"
-    LookupDialog.SearchFieldCombo.ListIndex = 0
     
     PopulateSourceDependentOptions
     
@@ -355,6 +382,9 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.AddItem "*Location/DB Name"
         LookupDialog.ResultTypeCombo.AddItem "*Coverage"
         LookupDialog.ResultTypeCombo.AddItem "**Barcode"
+        LookupDialog.ResultTypeCombo.AddItem "**Item Location"
+        LookupDialog.ResultTypeCombo.AddItem "**Item Enum/Chron"
+        LookupDialog.ResultTypeCombo.AddItem "**Shelf Locator"
     End If
     
     If LookupDialog.CatalogURLBox = "source:recap" Then
@@ -372,27 +402,41 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.AddItem "WorldCat Holdings"
     End If
     
+    LookupDialog.SearchFieldCombo.Clear
+        
     If Not bIsAlma Then
         LookupDialog.SearchFieldCombo.Style = 2 'fmStyleDropDownList
-        If LookupDialog.CatalogURLBox = "source:worldcat" Then
+        LookupDialog.SearchFieldCombo.AddItem "Keywords"
+        If LookupDialog.CatalogURLBox = "source:worldcat" Or LookupDialog.CatalogURLBox = "source:recap" Then
             LookupDialog.SearchFieldCombo.Enabled = True
-            LookupDialog.SearchFieldCombo.Clear
-            LookupDialog.SearchFieldCombo.AddItem "Keywords"
             LookupDialog.SearchFieldCombo.AddItem "Title"
             LookupDialog.SearchFieldCombo.AddItem "ISBN"
-            LookupDialog.SearchFieldCombo.AddItem "ISSN"
+            If LookupDialog.CatalogURLBox = "source:recap" Then
+                LookupDialog.SearchFieldCombo.AddItem "LCCN"
+            Else
+                LookupDialog.SearchFieldCombo.AddItem "ISSN"
+            End If
             LookupDialog.SearchFieldCombo.AddItem "OCLC No."
+
         Else
             LookupDialog.SearchFieldCombo.Enabled = False
         End If
-        LookupDialog.SearchFieldCombo.Value = "Keywords"
+        
         LookupDialog.AdditionalFieldsButton.Enabled = False
     Else
         LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
         LookupDialog.SearchFieldCombo.Enabled = True
         LookupDialog.AdditionalFieldsButton.Enabled = True
+        LookupDialog.SearchFieldCombo.AddItem "Keywords"
+        LookupDialog.SearchFieldCombo.AddItem "Call No."
+        LookupDialog.SearchFieldCombo.AddItem "Title"
+        LookupDialog.SearchFieldCombo.AddItem "ISBN"
+        LookupDialog.SearchFieldCombo.AddItem "ISSN"
+        LookupDialog.SearchFieldCombo.AddItem "MMS ID"
+        LookupDialog.SearchFieldCombo.AddItem "Barcode"
+        LookupDialog.SearchFieldCombo.ListIndex = 0
     End If
-
+    LookupDialog.SearchFieldCombo.ListIndex = 0
     LookupDialog.ResultTypeCombo.ListIndex = 0
 
 End Sub
@@ -498,7 +542,7 @@ Private Function EncodeByte(val As Integer) As String
 End Function
 
 Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String) As String
-    sURL = sBaseURL & "?operation=searchRetrieve&version=1.2&query="
+    sURL = sBaseURL & "?operation=searchRetrieve&version=1.2&maximumRecords=" & iMaximumRecords & "&query="
     sQuery1 = Replace(sQuery1, "http://", "")
     sQuery = EncodeURI(sQuery1)
     sIndex = ""
@@ -514,12 +558,19 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
         sIndex = "alma.title"
     Case "ISBN"
         sQuery = NormalizeISBN(sQuery1)
+        If sQuery = "" Then
+            sQuery = "FALSE"
+        End If
         sIndex = "alma.isbn"
     Case "ISSN"
         sQuery = NormalizeISSN(sQuery1)
+        If sQuery = "" Then
+            sQuery = "FALSE"
+        End If
         sIndex = "alma.issn"
     Case "Barcode"
         sIndex = "alma.barcode"
+        sQuery = Replace(sQuery1, " ", "")
     Case Else
         sIndex = sSearchType
     End Select
@@ -546,7 +597,6 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
         sURL = sURL & "+AND+alma.mms_tagSuppressed=false"
     End If
     ConstructURL = sURL
-
 End Function
 
 
@@ -713,6 +763,7 @@ Function Z3950Connect(sSource As String) As Boolean
         ZOOM_connection_option_set oZConn, "databaseName", sZDB
         ZOOM_connection_option_set oZConn, "preferredRecordSyntax", "USmarc"
         ZOOM_connection_option_set oZConn, "elementSetName", "FA"
+        ZOOM_connection_option_set oZConn, "largeSetLowerBound", "10000"
         ZOOM_connection_option_set oZConn, "user", sZUserName
         ZOOM_connection_option_set oZConn, "password", sZPassword
         ZOOM_connection_connect oZConn, sZHost, sZPort
@@ -787,11 +838,12 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
     Next i
 
     zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
+    ZOOM_resultset_option_set zrs, "count", iMaximumRecords
     zcount = ZOOM_resultset_size(zrs)
     If zcount > 0 Then
         sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
-        If zcount > 10 Then
-            zcount = 10
+        If zcount > iMaximumRecords Then
+            zcount = iMaximumRecords
         End If
         For i = 0 To zcount - 1
             zrec = ZOOM_resultset_record(zrs, i)
@@ -801,9 +853,10 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
             Dim recBytes() As Byte
             ReDim recBytes(zsize)
             CopyMemory recBytes(0), ByVal zptr, zsize
-            ReDim Preserve recBytes(zsize - 1) 'remove null terminator
+            If zsize > 0 Then
+                ReDim Preserve recBytes(zsize - 1) 'remove null terminator
+            End If
             sResultXML = StrConv(recBytes, vbUnicode)
-        
             oConverter.Open
             oConverter.Type = 1
             oConverter.Write recBytes
@@ -833,14 +886,60 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
     Dim sFormat As String
     sURL = ""
+    
+    If LookupDialog.ValidateCheckBox.Value Then
+        If sSearchType = "ISBN" Then
+            Dim sISBN As String
+            sISBN = NormalizeISBN(sQuery1)
+            iVbarPos = InStr(1, sISBN, "|")
+            If iVbarPos > 0 Then
+                sISBN = Left(sISBN, iVbarPos - 1)
+            End If
+            If sISBN = "INVALID" Or sISBN <> GenerateCheckDigit(sISBN) Then
+                Lookup = "INVALID"
+                Exit Function
+            End If
+        ElseIf sSearchType = "ISSN" Then
+            Dim sISSN As String
+            sISSN = NormalizeISSN(sQuery1)
+            If sISSN = "INVALID" Or sISSN <> GenerateCheckDigit(sISSN) Then
+                Lookup = "INVALID"
+                Exit Function
+            End If
+        End If
+    End If
       
     If sCatalogURL = "source:recap" Then
+        Select Case sSearchType
+            Case "ISBN"
+                sQuery1 = NormalizeISBN(sQuery1)
+                If sQuery1 <> "" Then
+                    If InStr(1, sQuery1, "|") > 0 Then
+                        sQuery = "search_field=advanced&f1=isbn&q1=" & _
+                            Replace(sQuery1, "|", "&op2=OR&f2=isbn&q2=")
+                    Else
+                        sQuery = "isbn_s:" + sQuery1
+                    End If
+                End If
+            Case "Title"
+                sQuery1 = "%22" & EncodeURI(sQuery1) & "%22&search_field=title"
+            Case "OCLC No."
+                sQuery1 = "oclc_s:" & NormalizeOCLC(sQuery1)
+            Case "LCCN"
+                sQuery1 = "lccn_s:" & sQuery1
+            Case Else
+                sQuery1 = "%22" & EncodeURI(sQuery1) & "%22"
+        End Select
+        sQuery1 = sQuery1 & "&per_page=" & iMaximumRecords
+        If sQuery = "" Then
+            sQuery = False
+        End If
         sURL = sBlacklightURL & sQuery1
     ElseIf sCatalogURL = "source:iplc_reshare" Then
-        sURL = sIPLCReshareURL & "%22" & sQuery1 & "%22"
+        sURL = sIPLCReshareURL & "%22" & EncodeURI(sQuery1) & "%22&limit=" & iMaximumRecords
     ElseIf sCatalogURL = "source:lccat" Then
         sURL = sLCCatURL & "?version=1.1&operation=searchRetrieve" & _
-            "&maximumRecords=10&recordSchema=marcxml&query=%22" & sQuery1 & "%22"
+            "&maximumRecords=" & iMaximumRecords & "&recordSchema=marcxml&query=%22" & sQuery1 & "%22"
     ElseIf sCatalogURL = "source:worldcat" Then
         sURL = "z3950"
     Else
@@ -848,6 +947,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     End If
     sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
+
 
     If sURL = "z3950" Then
         sResponse = Z3950Search(sQuery1, sSearchType, sCatalogURL)
@@ -906,7 +1006,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     Lookup = sResponse & sHoldings
 End Function
 
-Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings) As String
+Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings As Boolean, Optional sBarcode As Variant) As String
     aResultFields = Split(sResultTypeAll, "|", -1, 0)
     iResultTypes = UBound(aResultFields)
     sBasePath = ""
@@ -984,7 +1084,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                     Case "recap"
                         oRegEx.Pattern = """location_code"":""([^""]*)"""
                         Set oLoc = oRegEx.Execute(sCurrentRecord)
-                        sLoc = "Princeton"
                         If oLoc.Count > 0 Then
                             sLoc = oLoc(0).Submatches(0)
                             Select Case sLoc
@@ -995,11 +1094,22 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                                 Case "scsbcul"
                                     sLoc = "Columbia"
                                 Case Else
-                                    sLoc = "Princeton"
+                                    For i = 0 To oLoc.Count - 1
+                                        If InStr(1, oLoc(i).Submatches(0), "recap") > 0 Then
+                                            sLoc = "Princeton"
+                                            Exit For
+                                        End If
+                                    Next i
+                                    If sLoc <> "Princeton" Then
+                                        sLoc = ""
+                                    End If
+                                    
                             End Select
                         End If
                         If InStr(1, ExtractField, sLoc) = 0 Then
                             ExtractField = ExtractField & sLoc
+                        Else
+                            ExtractField = Left(ExtractField, Len(ExtractField) - 1)
                         End If
                     Case Else
                         ExtractField = "ERROR:InvalidRecap"
@@ -1078,6 +1188,87 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings)
                         sRecord = oRegEx.Replace(sRecord, "")
                     Next j
                     ExtractField = ExtractField & sRecord
+                  Case "Item Location"
+                        Set oHoldings = aRecords(i).SelectNodes("hold:holding")
+                        For j = 0 To oHoldings.length - 1
+                            sRecord = ""
+                            Set oLibraryCode = oHoldings(j).SelectNodes("hold:physicalLocation")
+                            sLibraryCode = ""
+                            If oLibraryCode.length = 1 Then
+                               sLibraryCode = oLibraryCode.Item(0).Text
+                            End If
+                            If Not IsMissing(sBarcode) Then
+                                Set oFieldList = oHoldings(j).SelectNodes(Replace(sHoldingsPrefix1, "hold:holding/", "") & _
+                                    "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:sublocation")
+                                If oFieldList.length = 0 Then
+                                   Set oFieldList = oHoldings(j).SelectNodes(Replace(sHoldingsPrefix2, "hold:holding/", "") & _
+                                    "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:sublocation")
+                                End If
+                            Else
+                                Set oFieldList = oHoldings(j).SelectNodes(Replace(sHoldingsPrefix1, "hold:holding/", "") & "/hold:sublocation")
+                                If oFieldList.length = 0 Then
+                                   Set oFieldList = oHoldings(j).SelectNodes(Replace(sHoldingsPrefix2, "hold:holding/", "") & "/hold:sublocation")
+                                End If
+                            End If
+                            For k = 0 To oFieldList.length - 1
+                                If sRecord <> "" Then
+                                    sRecord = sRecord & ChrW(166)
+                                End If
+                                sRecord = sRecord & sLibraryCode & " " & oFieldList.Item(k).XML
+                                oRegEx.Pattern = "<[^>]*>"
+                                sRecord = oRegEx.Replace(sRecord, "")
+                            Next k
+                            If ExtractField <> "" And sRecord <> "" Then
+                                ExtractField = ExtractField & "|"
+                            End If
+                            ExtractField = ExtractField & sRecord
+                        Next j
+                  Case "Item Enum/Chron"
+                        If Not IsMissing(sBarcode) Then
+                            Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & _
+                                "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:enumerationAndChronology/hold:text")
+                            If oFieldList.length = 0 Then
+                                Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & _
+                                    "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:enumerationAndChronology/hold:text")
+                            End If
+                        Else
+                            Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & "/hold:enumerationAndChronology/hold:text")
+                            If oFieldList.length = 0 Then
+                                Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & "/hold:enumerationAndChronology/hold:text")
+                            End If
+                        End If
+                        For j = 0 To oFieldList.length - 1
+                            If sRecord <> "" Then
+                                sRecord = sRecord & ChrW(166)
+                            End If
+                            sRecord = sRecord & oFieldList.Item(j).XML
+                            oRegEx.Pattern = "<[^>]*>"
+                            sRecord = oRegEx.Replace(sRecord, "")
+                        Next j
+                        ExtractField = ExtractField & sRecord
+                  Case "Shelf Locator"
+                        If Not IsMissing(sBarcode) Then
+                            Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & _
+                                "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:shelfLocator")
+                            If oFieldList.length = 0 Then
+                                Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & _
+                                    "[hold:pieceIdentifier/hold:value='" & sBarcode & "']/hold:shelfLocator")
+                            End If
+                        Else
+                            Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix1 & "/hold:shelfLocator")
+                            If oFieldList.length = 0 Then
+                                Set oFieldList = aRecords(i).SelectNodes(sHoldingsPrefix2 & "/hold:shelfLocator")
+                            End If
+                        End If
+                        For j = 0 To oFieldList.length - 1
+                            If sRecord <> "" Then
+                                sRecord = sRecord & ChrW(166)
+                            End If
+                            sRecord = sRecord & oFieldList.Item(j).XML
+                            oRegEx.Pattern = "<[^>]*>"
+                            sRecord = oRegEx.Replace(sRecord, "")
+                        Next j
+                        ExtractField = ExtractField & sRecord
                   Case "000" To "999z", "AVA" To "AVAz", "AVD" To "AVDz", "AVE" To "AVEz"
                      If sResultType = "000" Then
                        Set oFieldList = aRecords(i).SelectNodes(sBibPrefix)
@@ -1313,7 +1504,7 @@ Function DecodeIPLCUnicode(sSource As String) As String
     Set oMatch = oRegEx.Execute(sSource)
     For i = 0 To oMatch.Count - 1
         sDecoded = Mid(CStr(oMatch.Item(i)), 3)
-        Debug.Print oMatch.Item(i)
+        'Debug.Print oMatch.Item(i)
         sDecoded = ChrW(CDec("&H" & sDecoded))
         sSource = Replace(sSource, oMatch.Item(i), sDecoded)
     Next i
@@ -1336,10 +1527,10 @@ Function NormalizeISBN(sQuery As String) As String
         If oMatch.Count = 0 Then
             NormalizeISBN = ""
         Else
-            NormalizeISBN = Left(sQuery, 10)
+            NormalizeISBN = oMatch.Item(0)
         End If
     Else
-        NormalizeISBN = Left(sQuery, 13)
+        NormalizeISBN = oMatch.Item(0)
     End If
     If LookupDialog.ValidateCheckBox.Value Then
         NormalizeISBN = GenerateCheckDigit(NormalizeISBN)
@@ -1387,10 +1578,10 @@ Function GetOtherISBN(sISBN As String) As String
     End If
 End Function
 
-Function GenerateCheckDigit(sISXN As String)
+Function GenerateCheckDigit(sISXN As String) As String
     iChecksum = 0
     If Len(sISXN) <> 8 And Len(sISXN) <> 10 And Len(sISXN) <> 13 Then
-        GenerateCheckDigit = sISXN
+        GenerateCheckDigit = "INVALID"
         Exit Function
     End If
     GenerateCheckDigit = Left(sISXN, Len(sISXN) - 1)
@@ -1436,7 +1627,10 @@ Function GenerateCheckDigit(sISXN As String)
         End If
         GenerateCheckDigit = GenerateCheckDigit & iChecksum
     Else
-        GenerateCheckDigit = sISXN
+        GenerateCheckDigit = "INVALID"
+    End If
+    If GenerateCheckDigit <> sISXN Then
+        GenerateCheckDigit = "INVALID"
     End If
 End Function
 
@@ -1447,8 +1641,15 @@ Function NormalizeOCLC(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
-    oRegEx.Pattern = "[^0-9]"
+    oRegEx.Pattern = "^[^0-9]*"
     sQuery = oRegEx.Replace(sQuery, "")
+    oRegEx.Pattern = "[^0-9].*$"
+    sQuery = oRegEx.Replace(sQuery, "")
+    oRegEx.Pattern = "^0*"
+    sQuery = oRegEx.Replace(sQuery, "")
+    If sQuery = "" Then
+        sQuery = "FALSE"
+    End If
     NormalizeOCLC = sQuery
 End Function
 
