@@ -34,7 +34,7 @@ To search a non-Alma catalog (such as WorldCat), click the "Non-Alma Sources" bu
 
 If your SRU integration requires a username and password, you will be prompted for these.  (These are likely different than the personal credentials you use to log into Alma.  Check with your catalog administrator.)   If searching WorldCat, you will be prompted to enter your authorization number and password.  You can save these credentials by checking the "Remember these credentials" box in the login prompt, or delete the saved credentials by clicking the "Clear Credentials" button while the URL is selected. 
 
-## Setting up the query
+## Setting Up the Query
 Open an Excel spreadsheet and highlight the cells containing the data you want to search for in Alma.  You can highlight an entire column, or just specific cells, but all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
 <img src='./img/dialog.jpg'>
@@ -47,7 +47,7 @@ Below is an explanation of the fields in this dialog:
 
 **Ignore First Row (Header)**: If checked, the first cell in the selected range will not be searched.  You should check this if the first row is a header.
 
-**Generate header row from result types**: This option is avialable if the "Ignore First Row" option is checked.  For each result column, the header row will be populated with the corresponding label from the "Result Types" list.
+**Generate header row from result types**: This option is available if the "Ignore First Row" option is checked.  For each result column, the header row will be populated with the corresponding label from the "Result Types" list.
 
 **Validate and search equivalent ISBN/SNs**: If checked, and if “Field to search” is set to “ISBN” or “ISSN”, then each ISBN/SN will be validated.  If invalid, the value "INVALID" will be output in the result column(s). For ISBNs, the search will be done on both the 10-digit and 13-digit forms, regardless of which form is found in the spreadsheet.
 
@@ -72,7 +72,7 @@ Besides the search keys in the drop-down list, you can enter any search index su
 - Multiple result types can be selected for output, in which case they will be placed in consecutive columns in the spreadsheet, starting with the one indicated in the “Leftmost result column” field.  Use the “Add”, “Remove”, “Move Up” and “Move Down” button to edit or reorder the result types.
 - For some non-Alma sources, there are a limited number of result types available, and it is not possible enter a custom value in this field.  However, some sources also include a "Holdings" result type in the drop-down, which will retrieve a list of holding institutions for the item in question.
 
-Note that this tool is designed for running queries on lists of specific titles and identifiers, rather than more general queries that might return a large number of results.  Thus, to improve performance, a maximum of 25 records will be retreived for each row.
+Note that this tool is designed for running queries on lists of specific titles and identifiers, rather than more general queries that might return a large number of results.  Thus, to improve performance, a maximum of 25 records will be retrieved for each row.
 
 **Field Sets**:  Sets of field tags can be saved so that they do not need to be entered manually each time the tool is run.  After compiling a list of fields under “Result Types”, click the “New…” button to create and name a new set.  The “Load” button will populate the “Result Types” list with the fields in an existing set.  “Save” will update the fields in the selected set from the “Result types” list.  “Delete” will delete the selected set.
 
@@ -92,11 +92,11 @@ This example illustrates a typical use case.  The user starts with a title list 
 
 <img src='./img/example1.jpg'>
 
-They would like to search the catalog to confirm which items are owned by their instituion, and retrieve additional data for those items.  Since ISBNs are a more reliable search key than titles, the user highlights column A contianing the ISBNs, then clicks the "Look Up in Local Catalog" button in the "Library Tools" tab.  This brings up the following dialog:
+They would like to search the catalog to confirm which items are owned by their instituion, and retrieve additional data for those items.  Since ISBNs are a more reliable search key than titles, the user highlights column A contianing the ISBNs, then clicks the "Look Up in Catalog" button in the "Library Tools" tab.  This brings up the following dialog:
 
 <img src='./img/example2.jpg'>
 
-The "Range of cells to lookup up" field already shows the cells that the user hightlighted (in this case, the entire column A).  So, it is not necessary to change this field.  The user sets "Field to Search" to "ISBN".  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
+The "Range of cells to lookup up" field already shows the cells that the user highlighted (in this case, the entire column A).  So, it is not necessary to change this field.  The user sets "Field to Search" to "ISBN".  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
 - Call number - The asterisk indicates that this will be retrieved from the availability fields.  (If the user wanted to retrieve the call number from a bibliographic field, they could enter a specific MARC field name, such as 050 or 084).
 - 035$a#(OCoLC) - This retrieves all instances of 035$a containing the text "(OCoLC)", i.e. OCLC numbers.
 - 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field, i.e. the original-script version of the Chinese titles.
@@ -105,4 +105,15 @@ The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
 
 <img src='./img/example3.jpg'>
 
-For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the ISBN in row 9 was not found in the catalog, the value FALSE is output in each of these columns.
+For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  Since the ISBN in row 9 was not found in the catalog, the value FALSE is output in each of these columns.
+
+The user is now interested in looking up the OCLC number that were retrieved in order to check the WorldCat holdings.  They highlught column D, and click the "Look Up in Catalog" button again.  
+
+<img src='./img/example4.jpg'>
+
+This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources).  They set "Field to Search" to "OCLC No." and "Result Types" to "WorldCat Holdings".  (It is not necessary to click the "Add" button since there is only one result type.)   Column F is automatically selected as the result column.
+
+When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F with a list of holdings codes, separated by the broken bar character.
+
+<img src='./img/example5.jpg'>
+
