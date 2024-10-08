@@ -107,7 +107,7 @@ The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
 
 For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  Since the ISBN in row 9 was not found in the catalog, the value FALSE is output in each of these columns.
 
-The user is now interested in looking up the OCLC number that were retrieved in order to check the WorldCat holdings.  They highlught column D, and click the "Look Up in Catalog" button again.  
+The user is now interested in looking up the OCLC numbers that were retrieved in order to check the WorldCat holdings.  They highlught column D, and click the "Look Up in Catalog" button again.  
 
 <img src='./img/example4.jpg'>
 
