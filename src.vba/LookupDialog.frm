@@ -1,3 +1,11 @@
+Attribute VB_Name = "LookupDialog"
+Attribute VB_Base = "0{4638F9FF-4520-4CBA-AC9D-24B58A843FA9}{2ECD3780-9341-426E-9FBB-A63D0AC313F8}"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Attribute VB_TemplateDerived = False
+Attribute VB_Customizable = False
 Private Sub AdditionalFieldsButton_Click()
     Catalog.aExplainFields = Catalog.GetAllFields()
     AdditionalFieldsDialog.FilterBox.Value = ""
@@ -20,8 +28,12 @@ Private Sub AddResultButton_Click()
 End Sub
 
 Private Sub AddURLButton_Click()
-    aFieldMap = Catalog.GetAllFields()
-    If Not IsNull(aFieldMap) Then
+    If Catalog.bIsAlma Then
+        aFieldMap = Catalog.GetAllFields()
+        If Not IsNull(aFieldMap) Then
+            Catalog.SetRegistryURLsFromCombo
+        End If
+    Else
         Catalog.SetRegistryURLsFromCombo
     End If
 End Sub
@@ -42,6 +54,11 @@ Private Sub CatalogURLBox_Change()
             Exit For
         End If
     Next i
+    Catalog.bIsAlma = True
+    If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
+        Catalog.bIsAlma = False
+    End If
+    Catalog.PopulateSourceDependentOptions
 End Sub
 
 Private Sub ClearCredentialsButton_Click()
@@ -102,6 +119,14 @@ Private Sub HelpButton_Click()
     ThisWorkbook.FollowHyperlink Catalog.sRepoURL & "#readme"
 End Sub
 
+Private Sub IgnoreHeaderCheckbox_Click()
+    If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+        LookupDialog.GenerateHeaderCheckBox.Enabled = True
+    Else
+        LookupDialog.GenerateHeaderCheckBox.Enabled = False
+    End If
+End Sub
+
 Private Sub LoadSetButton_Click()
     If LookupDialog.FieldSetList.ListIndex < 0 Then
         MsgBox ("Please select a set name")
@@ -153,12 +178,20 @@ Private Sub NewSetButton_Click()
 End Sub
 
 Private Sub OKButton_Click()
-    aFieldMap = Catalog.GetAllFields()
-    If IsNull(aFieldMap) Then
-        Exit Sub
+    If Catalog.bIsAlma Then
+        aFieldMap = Catalog.GetAllFields()
+        If IsNull(aFieldMap) Then
+            Exit Sub
+        End If
     End If
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
+    If sCatalogURL = "source:worldcat" Then
+        bSuccess = Catalog.Z3950Connect(sCatalogURL)
+        If Not bSuccess Then
+            Exit Sub
+        End If
+    End If
     Catalog.SetRegistryURLsFromCombo
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
@@ -178,11 +211,12 @@ Private Sub OKButton_Click()
         Next i
     End If
     'Validate selected range, truncate to part containing actual data
-    Set oSourceRange = Range(LookupRange.Value)
+    
+    Set oSourceRange = Workbooks(Catalog.sFileName).Worksheets(Catalog.sSheetName).Range(LookupRange.Value)
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
         With oSourceRange
-            iRowCount = oSourceRange.Rows.Count
+            iRowCount = .Rows.Count
             iSourceColumn = .Cells(1, 1).Column
             iFirstSourceRow = .Cells(1, 1).Row
             If LookupRange.Value Like "*#*" Then
@@ -194,24 +228,26 @@ Private Sub OKButton_Click()
                 iLastSourceRow = iFirstSourceRow + .Rows.Count - 1
             End If
         End With
-        If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
-            iFirstSourceRow = iFirstSourceRow + 1
-            iRowCount = iRowCount - 1
-        End If
+        iStartIndex = 1
+        'If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+        '    iStartIndex = 2
+        '    iRowCount = iRowCount - 1
+        'End If
         Catalog.bTerminateLoop = False
         iTotal = iLastSourceRow - iFirstSourceRow + 1
         SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
         SearchingDialog.Show
         'Iterate through rows, look up in catalog
-        For i = iFirstSourceRow To iLastSourceRow
+        For i = iStartIndex To iTotal
             If Catalog.bTerminateLoop = True Then
                 Exit For
             End If
-            If Not Rows(i).EntireRow.Hidden Then
-                SearchingDialog.ProgressLabel = "Row " & (i - iFirstSourceRow + 1) & " of " & iTotal
+            If Not oSourceRange.Rows(i).EntireRow.Hidden Then
+                SearchingDialog.ProgressLabel = "Row " & i & " of " & iTotal
                 Application.ScreenUpdating = False
                 Dim sSearchString As String
-                sSearchString = Cells(i, iSourceColumn).Value
+                sSearchString = oSourceRange.Cells(i, 1).Value
+                ' sSearchString
                 If sSearchString <> "" Then
                     If sSearchString = "FALSE" Then
                         sResultRec = ""
@@ -225,38 +261,71 @@ Private Sub OKButton_Click()
                         End If
                     End If
                     For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
-                        Dim sType As String
-                        sType = LookupDialog.ResultTypeList.List(j)
-                        sType = Replace(sType, "*", "")
-                        If sType = "MMS ID" Then
-                            sType = "001"
-                        ElseIf sType = "ISBN" Then
-                            sType = "020"
-                        ElseIf sType = "ISSN" Then
-                            sType = "022"
-                        ElseIf sType = "Title" Then
-                            sType = "245"
-                        ElseIf sType = "Call No." Then
-                            sType = "AVA$d"
-                        ElseIf sType = "Location/DB Name" Then
-                            sType = "AVA$bj|AVE$lm"
-                        ElseIf sType = "Language code" Then
-                            sType = "008(35,3)"
-                        ElseIf sType = "Coverage" Then
-                            sType = "AVA$t|AVE$s"
-                        ElseIf InStr(1, sType, "Leader") = 1 Or InStr(1, sType, "LDR") Then
-                            sType = Replace(sType, "Leader", "000")
-                            sType = Replace(sType, "LDR", "000")
-                        ElseIf sType = "True/False" Then
-                            sType = "exists"
+                        Dim stype As String
+                        stype = LookupDialog.ResultTypeList.List(j)
+                        stype = Replace(stype, "*", "")
+                        If i = 1 And LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+                            sResult = ""
+                            If LookupDialog.GenerateHeaderCheckBox.Value = True Then
+                                sResult = stype
+                            End If
+                            GoTo NextRow
+                        End If
+                        If stype = "MMS ID" Or stype = "Catalog ID" Or _
+                            (LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "OCLC No.") Then
+                            stype = "001"
+                        ElseIf stype = "ISBN" Then
+                            stype = "020"
+                        ElseIf stype = "ISSN" Then
+                            stype = "022"
+                        ElseIf stype = "Title" Then
+                            stype = "245"
+                        ElseIf stype = "OCLC No." Then
+                            
+                            stype = "035$a#(OCoLC)"
+                        ElseIf stype = "Call No." Then
+                            stype = "AVA$d"
+                        ElseIf stype = "Location/DB Name" Then
+                            stype = "AVA$bj|AVE$lm"
+                        ElseIf stype = "Language code" Then
+                            stype = "008(35,3)"
+                        ElseIf stype = "Coverage" Then
+                            stype = "AVA$t|AVE$s"
+                        ElseIf InStr(1, stype, "Leader") = 1 Or InStr(1, stype, "LDR") Then
+                            stype = Replace(stype, "Leader", "000")
+                            stype = Replace(stype, "LDR", "000")
+                        ElseIf stype = "True/False" Then
+                            stype = "exists"
+                        ElseIf stype = "ReCAP Holdings" Then
+                            stype = "recap"
+                        ElseIf stype = "IPLC ReShare Holdings" Then
+                            stype = "999$sp"
+                        ElseIf stype = "WorldCat Holdings" Then
+                            stype = "948$c"
                         End If
                         If sResultRec = "" Then
                             sResult = ""
+                        ElseIf sResultRec = "INVALID" Then
+                            sResult = "INVALID"
                         Else
-                            If sType = "Barcode" Then
-                                sResult = ExtractField(sType, CStr(sResultHold), True)
+                            If stype = "Barcode" Then
+                                sResult = ExtractField(stype, CStr(sResultHold), True)
+                            ElseIf stype = "Item Location" Or stype = "Item Enum/Chron" Or stype = "Shelf Locator" Then
+                                sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
+                                sBarcode = ""
+                                If sSearchType = "Barcode" Or sSearchType = "alma.barcode" Then
+                                    sResult = ExtractField(stype, CStr(sResultHold), True, sSearchString)
+                                Else
+                                    sResult = ExtractField(stype, CStr(sResultHold), True)
+                                End If
                             Else
-                                sResult = ExtractField(sType, CStr(sResultRec), False)
+                                sResult = ExtractField(stype, CStr(sResultRec), False)
+                                If sResult = "ERROR:InvalidRecap" Then
+                                    MsgBox ("ReCAP queries do not support the result type: """ & LookupDialog.ResultTypeList.List(j) & """")
+                                    SearchingDialog.Hide
+                                    LookupDialog.Show
+                                    Exit Sub
+                                End If
                             End If
                             sResult = Trim(sResult)
                             iExtraBars = (Len(sResult) - Len(Replace(sResult, "|", ""))) - _
@@ -268,16 +337,19 @@ Private Sub OKButton_Click()
                         If sResult = "" Then
                             sResult = False
                         End If
-                        Cells(i, iResultColumn + j).NumberFormat = "@"
-                        Cells(i, iResultColumn + j).Value = sResult
+NextRow:
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = sResult
                     Next j
                 End If
-                minRow = ActiveWindow.VisibleRange.Row
-                maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
-                If i <= minRow + 1 Or i >= maxRow - 1 Then
-                    ActiveWindow.SmallScroll down:=(i - (maxRow + minRow) / 2) + 1
+                If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then
+                    minRow = ActiveWindow.VisibleRange.Row
+                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
+                    If iFirstSourceRow + i <= minRow + 1 Or iFirstSourceRow + i >= maxRow - 1 Then
+                        ActiveWindow.SmallScroll down:=(iFirstSourceRow + i - (maxRow + minRow) / 2) + 1
+                    End If
+                    Application.ScreenUpdating = True
                 End If
-                Application.ScreenUpdating = True
                 DoEvents
             End If
         Next i
@@ -298,10 +370,9 @@ Private Sub OKButton_Click()
     End
 End Sub
 
-Private Sub RecapCheckBox_Click()
-    PopulateCombos
-    RedrawButtons
-    LookupDialog.ResultTypeList.Clear
+
+Private Sub OtherSourcesButton_Click()
+    OtherSourcesDialog.Show
 End Sub
 
 Private Sub RemoveResultButton_Click()

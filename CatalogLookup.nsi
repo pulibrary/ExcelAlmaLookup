@@ -6,6 +6,15 @@ RequestExecutionLevel user
 
 ; General
 !define filename "CatalogLookup.xlam"
+!define yazdllx86 "yaz5x86.dll"
+!define yazdllx64 "yaz5x64.dll"
+!define yazdll "yaz5.dll"
+!define libxml2x86 "libxml2x86.dll"
+!define libxsltx86 "libxsltx86.dll"
+!define libxml2x64 "libxml2x64.dll"
+!define libxsltx64 "libxsltx64.dll"
+!define libxml2 "libxml2.dll"
+!define libxslt "libxslt.dll"
 !define displayname "Excel Local Catalog Lookup"
 
 Name "${displayname}"
@@ -37,16 +46,25 @@ SetOverwrite On
 
 ; Installer Section
 Section "-Install"
- 	ClearErrors
-	SetOverwrite try
+  	SetOutPath $INSTDIR
 
-  	SetOutPath $INSTDIR	
-
-	writepluginfile:
+	CreateDirectory $INSTDIR\x86
+	CreateDirectory $INSTDIR\x64
+	
+	; ADD FILES HERE
 	File "${filename}"
-	IfErrors 0 checkversion
-	MessageBox MB_RETRYCANCEL "The plugin file could not be written.  Please make sure Excel is not currently running.  If it is, close it and click 'Retry'." IDRETRY writepluginfile
-	Abort "Installation failed: Plugin file could not be written."
+	File "${yazdllx86}"
+	Rename "${yazdllx86}" "x86\${yazdll}"
+	File "${yazdllx64}"
+	Rename "${yazdllx64}" "x64\${yazdll}"
+	File "${libxml2x86}"
+	Rename "${libxml2x86}" "x86\${libxml2}"
+	File "${libxsltx86}"
+	Rename "${libxsltx86}" "x86\${libxslt}"
+	File "${libxml2x64}"
+	Rename "${libxml2x64}" "x64\${libxml2}"
+	File "${libxsltx64}"
+	Rename "${libxsltx64}" "x64\${libxslt}"
 
 	checkversion:
 	; Check Installed Excel Version
@@ -100,6 +118,10 @@ Section "Uninstall"
 StrCpy $INSTDIR "$APPDATA\${displayname}"
 ; ADD FILES HERE...
 Delete "$INSTDIR\${filename}"
+Delete "$INSTDIR\x86\*"
+RMDir "$INSTDIR\x86"
+Delete "$INSTDIR\x64\*"
+RMDir "$INSTDIR\x64"
 Delete "$INSTDIR\uninstall.exe"
 
 RMDir "$INSTDIR"
