@@ -347,8 +347,8 @@ Sub PopulateCombos()
     Dim aOtherSources(4, 2) As Variant
     aOtherSources(0, 0) = "source:recap"
     aOtherSources(0, 1) = "ReCAP"
-    aOtherSources(1, 0) = "source:iplc_reshare"
-    aOtherSources(1, 1) = "IPLC ReShare (BorrowDirect)"
+    aOtherSources(1, 0) = "source:borrowdirect"
+    aOtherSources(1, 1) = "BorrowDirect (IPLC ReShare)"
     aOtherSources(2, 0) = "source:lccat"
     aOtherSources(2, 1) = "Library of Congress"
     aOtherSources(3, 0) = "source:worldcat"
@@ -394,8 +394,8 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.Style = 0 'fmStyleDropDownCombo
     End If
     
-    If LookupDialog.CatalogURLBox = "source:iplc_reshare" Then
-        LookupDialog.ResultTypeCombo.AddItem "IPLC ReShare Holdings"
+    If LookupDialog.CatalogURLBox = "source:borrowdirect" Then
+        LookupDialog.ResultTypeCombo.AddItem "BorrowDirect Holdings"
     End If
     
     If LookupDialog.CatalogURLBox = "source:worldcat" Then
@@ -933,9 +933,11 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
         sQuery1 = sQuery1 & "&per_page=" & iMaximumRecords
         If sQuery = "" Then
             sQuery = False
+        Else 'Throttle ReCAP queries to one per second
+            Application.Wait (Now() + TimeValue("0:00:01"))
         End If
         sURL = sBlacklightURL & sQuery1
-    ElseIf sCatalogURL = "source:iplc_reshare" Then
+    ElseIf sCatalogURL = "source:borrowdirect" Then
         sURL = sIPLCReshareURL & "%22" & EncodeURI(sQuery1) & "%22&limit=" & iMaximumRecords
     ElseIf sCatalogURL = "source:lccat" Then
         sURL = sLCCatURL & "?version=1.1&operation=searchRetrieve" & _
@@ -963,7 +965,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
             Loop
             sResponse = .responseText
             sHoldings = ""
-            If sCatalogURL = "source:iplc_reshare" Then
+            If sCatalogURL = "source:borrowdirect" Then
                 sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
                 iXMLstart = InStr(1, sResponse, "<record")
                 While iXMLstart > 0
@@ -1456,7 +1458,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
             ExtractField = HtmlDecode(ExtractField)
         End If
     End If
-    If LookupDialog.CatalogURLBox.Value = "source:iplc_reshare" Then
+    If LookupDialog.CatalogURLBox.Value = "source:borrowdirect" Then
         ExtractField = DecodeIPLCUnicode(ExtractField)
     End If
     If sResultType = "999$sp" Then

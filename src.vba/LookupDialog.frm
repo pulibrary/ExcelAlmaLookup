@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{4638F9FF-4520-4CBA-AC9D-24B58A843FA9}{2ECD3780-9341-426E-9FBB-A63D0AC313F8}"
+Attribute VB_Base = "0{279A22FF-6378-4324-BE3C-A4D0A7BB51A1}{F6992BAA-77F6-4859-8CC5-DC4A028D4116}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -281,7 +281,6 @@ Private Sub OKButton_Click()
                         ElseIf stype = "Title" Then
                             stype = "245"
                         ElseIf stype = "OCLC No." Then
-                            
                             stype = "035$a#(OCoLC)"
                         ElseIf stype = "Call No." Then
                             stype = "AVA$d"
@@ -298,7 +297,7 @@ Private Sub OKButton_Click()
                             stype = "exists"
                         ElseIf stype = "ReCAP Holdings" Then
                             stype = "recap"
-                        ElseIf stype = "IPLC ReShare Holdings" Then
+                        ElseIf stype = "BorrowDirect Holdings" Then
                             stype = "999$sp"
                         ElseIf stype = "WorldCat Holdings" Then
                             stype = "948$c"
