@@ -931,8 +931,8 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
                 sQuery1 = "%22" & EncodeURI(sQuery1) & "%22"
         End Select
         sQuery1 = sQuery1 & "&per_page=" & iMaximumRecords
-        If sQuery = "" Then
-            sQuery = False
+        If sQuery1 = "" Then
+            sQuery1 = False
         Else 'Throttle ReCAP queries to one per second
             Application.Wait (Now() + TimeValue("0:00:01"))
         End If
