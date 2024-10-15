@@ -1,5 +1,5 @@
 ##########################################################################
-# Copyright 2023 Princeton University Library
+# Copyright 2024 Princeton University Library
 # Additional copyright may be held by others, as reflected in the commit log
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,3 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# 
+# This software includes the YAZ toolkit (Copyright © 1995-2018 Index Data), 
+# which is distributed under the following license:
+#
+#     https://www.indexdata.com/resources/licenses/
