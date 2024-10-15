@@ -117,4 +117,4 @@ When the user clicks the "OK" button, they will be prompted to enter their World
 
 <img src='./img/example5.jpg'>
 
-Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so tht only the number is searched in WorldCat.
+Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so that only the number is searched in WorldCat.
