@@ -1,6 +1,8 @@
 # Excel Alma Lookup
 An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. Selected non-Alma catalogs can also be searched, such as WorldCat, Library of Congress, ReCAP, and IPLC ReShare.
 
+**NEW!** We are interested in suggestions for what features to develop next for this tool.  Please let us know your thoughts in the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/discussions).
+
 ## System Requirements
 - Microsoft Windows version 7 or higher
 - Microsoft Excel version 2007 or higher
@@ -85,7 +87,7 @@ A small dialog box will show the progress of the query.  You can terminate it at
 
 ### Reporting Bugs and Making Suggestions
 
-If you encounter any problems with this tool or would like to request new features, please go to the "Issues" tab at the top of this github page, and click the "New Issue" button. 
+You can use the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/discussions) or open an [issue](https://github.com/pulibrary/ExcelAlmaLookup/issues) if you would like to request features, report bugs, or ask general questions.
 
 ## Example
 This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
@@ -117,4 +119,4 @@ When the user clicks the "OK" button, they will be prompted to enter their World
 
 <img src='./img/example5.jpg'>
 
-Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so tht only the number is searched in WorldCat.
+Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so that only the number is searched in WorldCat.
