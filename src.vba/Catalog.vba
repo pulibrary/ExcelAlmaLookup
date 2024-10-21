@@ -19,7 +19,7 @@ Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.0"
+Public Const sVersion = "v1.3.1"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -1086,6 +1086,8 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "recap"
                         oRegEx.Pattern = """location_code"":""([^""]*)"""
                         Set oLoc = oRegEx.Execute(sCurrentRecord)
+                        oRegEx.Pattern = """location"":""([^""]*)"""
+                        Set oLocName = oRegEx.Execute(sCurrentRecord)
                         If oLoc.Count > 0 Then
                             sLoc = oLoc(0).Submatches(0)
                             Select Case sLoc
@@ -1096,8 +1098,8 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                                 Case "scsbcul"
                                     sLoc = "Columbia"
                                 Case Else
-                                    For i = 0 To oLoc.Count - 1
-                                        If InStr(1, oLoc(i).Submatches(0), "recap") > 0 Then
+                                    For i = 0 To oLocName.Count - 1
+                                        If InStr(1, oLocName(i).Submatches(0), "Remote Storage") > 0 Then
                                             sLoc = "Princeton"
                                             Exit For
                                         End If
