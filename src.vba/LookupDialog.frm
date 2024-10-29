@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{ECE5E74A-EA9D-4FEC-92FC-2944C848ABF8}{EF260AE9-46C3-44AF-8A9A-71AB4979C8AC}"
+Attribute VB_Base = "0{B0A3DCBB-C34D-420F-BEBD-E00851586544}{CF25E99D-C97B-45FA-A9AC-A1803470DEB7}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -247,7 +247,8 @@ Private Sub OKButton_Click()
                 Application.ScreenUpdating = False
                 Dim sSearchString As String
                 sSearchString = oSourceRange.Cells(i, 1).Value
-                ' sSearchString
+                sSearchString = Replace(sSearchString, Chr(160), " ")
+                sSearchString = Trim(sSearchString)
                 If sSearchString <> "" Then
                     If sSearchString = "FALSE" Then
                         sResultRec = ""

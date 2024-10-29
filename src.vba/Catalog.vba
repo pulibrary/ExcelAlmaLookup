@@ -19,7 +19,7 @@ Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.1"
+Public Const sVersion = "v1.3.2"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -1508,7 +1508,6 @@ Function DecodeIPLCUnicode(sSource As String) As String
     Set oMatch = oRegEx.Execute(sSource)
     For i = 0 To oMatch.Count - 1
         sDecoded = Mid(CStr(oMatch.Item(i)), 3)
-        'Debug.Print oMatch.Item(i)
         sDecoded = ChrW(CDec("&H" & sDecoded))
         sSource = Replace(sSource, oMatch.Item(i), sDecoded)
     Next i
