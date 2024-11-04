@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{B0A3DCBB-C34D-420F-BEBD-E00851586544}{CF25E99D-C97B-45FA-A9AC-A1803470DEB7}"
+Attribute VB_Base = "0{A767D8F5-30D6-4F19-AA71-373A0453F864}{7C19AE13-CF6D-49F5-ACC8-4F38A38D8DC7}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -229,10 +229,6 @@ Private Sub OKButton_Click()
             End If
         End With
         iStartIndex = 1
-        'If LookupDialog.IgnoreHeaderCheckbox.Value = True Then
-        '    iStartIndex = 2
-        '    iRowCount = iRowCount - 1
-        'End If
         Catalog.bTerminateLoop = False
         iTotal = iLastSourceRow - iFirstSourceRow + 1
         SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
@@ -247,7 +243,8 @@ Private Sub OKButton_Click()
                 Application.ScreenUpdating = False
                 Dim sSearchString As String
                 sSearchString = oSourceRange.Cells(i, 1).Value
-                sSearchString = Replace(sSearchString, Chr(160), " ")
+                sSearchString = Replace(sSearchString, ChrW(160), " ")
+                sSearchString = Replace(sSearchString, ChrW(166), "|")
                 sSearchString = Trim(sSearchString)
                 If sSearchString <> "" Then
                     If sSearchString = "FALSE" Then

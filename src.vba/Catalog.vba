@@ -19,7 +19,7 @@ Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.2"
+Public Const sVersion = "v1.3.3"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -912,21 +912,13 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     If sCatalogURL = "source:recap" Then
         Select Case sSearchType
             Case "ISBN"
-                sQuery1 = NormalizeISBN(sQuery1)
-                If sQuery1 <> "" Then
-                    If InStr(1, sQuery1, "|") > 0 Then
-                        sQuery = "search_field=advanced&f1=isbn&q1=" & _
-                            Replace(sQuery1, "|", "&op2=OR&f2=isbn&q2=")
-                    Else
-                        sQuery = "isbn_s:" + sQuery1
-                    End If
-                End If
+                sQuery1 = "isbn_s:" & Replace(NormalizeISBN(sQuery1), "|", "+OR+")
             Case "Title"
                 sQuery1 = "%22" & EncodeURI(sQuery1) & "%22&search_field=title"
             Case "OCLC No."
-                sQuery1 = "oclc_s:" & NormalizeOCLC(sQuery1)
+                sQuery1 = "oclc_s:" & Replace(NormalizeOCLC(sQuery1), "|", "+OR+")
             Case "LCCN"
-                sQuery1 = "lccn_s:" & sQuery1
+                sQuery1 = "lccn_s:" & Replace(sQuery1, "|", "+OR+")
             Case Else
                 sQuery1 = "%22" & EncodeURI(sQuery1) & "%22"
         End Select
@@ -949,7 +941,6 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     End If
     sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
-
 
     If sURL = "z3950" Then
         sResponse = Z3950Search(sQuery1, sSearchType, sCatalogURL)
