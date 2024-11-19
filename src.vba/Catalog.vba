@@ -19,7 +19,7 @@ Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.3"
+Public Const sVersion = "v1.3.4"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -390,6 +390,7 @@ Sub PopulateSourceDependentOptions()
     If LookupDialog.CatalogURLBox = "source:recap" Then
         LookupDialog.ResultTypeCombo.Style = 2 'fmStyleDropDownList
         LookupDialog.ResultTypeCombo.AddItem "ReCAP Holdings"
+        LookupDialog.ResultTypeCombo.AddItem "ReCAP CGD"
     Else
         LookupDialog.ResultTypeCombo.Style = 0 'fmStyleDropDownCombo
     End If
@@ -1106,6 +1107,28 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Else
                             ExtractField = Left(ExtractField, Len(ExtractField) - 1)
                         End If
+                    Case "recap_cgd"
+                        oRegEx.Pattern = "(?:""location_code"":""([^""]*)""[^}]*)?(?:""description"":""([^""]*)""[^}]*)?(?:""use_statement"":""([^""]*)""[^}]*)?""cgd"":""([^""]*)""[^}]*""collection_code"":""([^""]*)"""
+                        sCGD = ""
+                        Set oCGD = oRegEx.Execute(sCurrentRecord)
+                        sRecapLoc = ""
+                        For i = 0 To oCGD.Count - 1
+                            If oCGD(i).Submatches(0) <> "" Then
+                                sRecapLoc = oCGD(i).Submatches(0)
+                                sRecapLoc = Replace(sRecapLoc, "scsb", "")
+                            End If
+                            If sCGD <> "" Then
+                                sCGD = sCGD & Chr(166)
+                            End If
+                            sCGD = sCGD & sRecapLoc & "-" & oCGD(i).Submatches(4) & "-" & oCGD(i).Submatches(3)
+                            If oCGD(i).Submatches(2) <> "" Then
+                                sCGD = sCGD & "-" & oCGD(i).Submatches(2)
+                            End If
+                            If oCGD(i).Submatches(1) <> "" Then
+                                sCGD = sCGD & "-" & oCGD(i).Submatches(1)
+                            End If
+                        Next i
+                        ExtractField = ExtractField & sCGD
                     Case Else
                         ExtractField = "ERROR:InvalidRecap"
                         Exit Function

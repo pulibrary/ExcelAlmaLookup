@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{A767D8F5-30D6-4F19-AA71-373A0453F864}{7C19AE13-CF6D-49F5-ACC8-4F38A38D8DC7}"
+Attribute VB_Base = "0{0BFE1CEB-0FFE-4823-B392-74E809AA0188}{A9BDEA98-0A93-40A4-B2A6-36BA232D7F9A}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -295,6 +295,8 @@ Private Sub OKButton_Click()
                             stype = "exists"
                         ElseIf stype = "ReCAP Holdings" Then
                             stype = "recap"
+                        ElseIf stype = "ReCAP CGD" Then
+                            stype = "recap_cgd"
                         ElseIf stype = "BorrowDirect Holdings" Then
                             stype = "999$sp"
                         ElseIf stype = "WorldCat Holdings" Then
