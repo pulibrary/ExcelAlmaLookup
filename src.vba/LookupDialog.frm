@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{0BFE1CEB-0FFE-4823-B392-74E809AA0188}{A9BDEA98-0A93-40A4-B2A6-36BA232D7F9A}"
+Attribute VB_Base = "0{B9E76849-0305-41AC-994F-737D7B61542C}{E5270262-F0DD-4C85-875D-B681717C46B5}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -272,6 +272,8 @@ Private Sub OKButton_Click()
                         If stype = "MMS ID" Or stype = "Catalog ID" Or _
                             (LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "OCLC No.") Then
                             stype = "001"
+                        ElseIf stype = "LCCN" Then
+                            stype = "010"
                         ElseIf stype = "ISBN" Then
                             stype = "020"
                         ElseIf stype = "ISSN" Then

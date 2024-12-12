@@ -19,7 +19,7 @@ Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.4"
+Public Const sVersion = "v1.3.5"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -389,6 +389,7 @@ Sub PopulateSourceDependentOptions()
     
     If LookupDialog.CatalogURLBox = "source:recap" Then
         LookupDialog.ResultTypeCombo.Style = 2 'fmStyleDropDownList
+        LookupDialog.ResultTypeCombo.AddItem "LCCN"
         LookupDialog.ResultTypeCombo.AddItem "ReCAP Holdings"
         LookupDialog.ResultTypeCombo.AddItem "ReCAP CGD"
     Else
@@ -1047,6 +1048,17 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         ExtractField = "TRUE "
                     Case "001"
                         ExtractField = ExtractField & sID
+                    Case "010"
+                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Lccn S"""
+                        Set oLCCNs = oRegEx.Execute(sCurrentRecord)
+                        If oLCCNs.Count > 0 Then
+                            sLCCNs = oLCCNs(0).Submatches(0)
+                            sLCCNs = Replace(sLCCNs, """,""", Chr(166))
+                            sLCCNs = Replace(sLCCNs, """", "")
+                            ExtractField = ExtractField & sLCCNs
+                        Else
+                            ExtractField = ExtractField & " "
+                        End If
                     Case "020"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
                         Set oISBNs = oRegEx.Execute(sCurrentRecord)
