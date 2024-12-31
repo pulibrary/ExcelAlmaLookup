@@ -23,6 +23,7 @@ InstallDir "$APPDATA\${displayname}"
 InstallDirRegKey HKCU "Software\${displayname}" "InstallDir" ;
 
 !insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
@@ -44,13 +45,141 @@ SectionEnd
 
 SetOverwrite On
 
+Var /GLOBAL xlVerReg
+Var /GLOBAL xlVerNo
+Var /GLOBAL i
+Var /GLOBAL keyname
+Var /GLOBAL keyname2
+Var /GLOBAL keyprefix
+Var /GLOBAL openpath
+Var /GLOBAL openname
+Var /GLOBAL removeold
+Var /GLOBAL namelen
+Var /GLOBAL lastblankkey
+
 ; Installer Section
 Section "-Install"
   	SetOutPath $INSTDIR
 
+	ClearErrors
+	FileOpen $R0 $INSTDIR\tmp.dat w
+	FileClose $R0
+	Delete $INSTDIR\tmp.dat
+	${If} ${Errors}
+  		Abort "User does not have permission to write to the output directory."
+	${EndIf}
+
+	ClearErrors
+	FileOpen $R0 "$INSTDIR\${filename}" a
+	FileClose $R0 
+	${If} ${Errors} 
+		Abort "Excel is open.  Please close Excel before trying to install."
+	${EndIf}
+
+	; Check Installed Excel Version
+	ReadRegStr $xlVerReg HKCR "Excel.Application\CurVer" ""
+
+	${If} $xlVerReg == 'Excel.Application.12' ; Excel 2007
+		StrCpy $xlVerNo "12.0"
+	${ElseIf} $xlVerReg == 'Excel.Application.14' ; Excel 2010
+		StrCpy $xlVerNo "14.0"
+	${ElseIf} $xlVerReg == 'Excel.Application.15' ; Excel 2013
+		StrCpy $xlVerNo "15.0"
+	${ElseIf} $xlVerReg == 'Excel.Application.16' ; Excel 2016
+		StrCpy $xlVerNo "16.0"
+	${Else}
+		Abort "An appropriate version of Excel is not installed. $\n${displayname} setup will be canceled."
+	${EndIf}
+
+
+	StrCpy $removeold "false"
+	StrLen $namelen "${filename}"
+	IntOp $namelen $namelen  * -1
+	IntOp $namelen $namelen - 1
+	StrCpy $i 0
+	loop:
+		EnumRegValue $keyname HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $i
+		StrCmp $keyname "" done
+		StrCpy $keyprefix $keyname 4
+		${If} $keyprefix == "OPEN"
+			ReadRegStr $openpath HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $keyname
+			StrCpy $openname $openpath "" $namelen
+			StrCpy $openname $openname -1
+			StrCpy $openpath $openpath $namelen
+			StrCpy $openpath $openpath "" 1
+			${If} "$openname" == "${filename}"
+				${If} $removeold == "false"
+					MessageBox MB_YESNO "This plugin is already installed.  Replace existing version?" IDYES 0 IDNO abort
+					StrCpy $removeold "true"
+				${EndIf}
+				Delete "$openpath\x86\*"
+				RMDir "$openpath\x86"
+				Delete "$openpath\x64\*"
+				RMDir "$openpath\x64"
+				Delete "$openpath\*"
+				RMDir "$openpath"
+				DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $keyname
+				DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Add-in Manager" "$openpath\${filename}"
+						
+				EnumRegValue $keyname2 HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $i
+				${If} $keyname == $keyname2
+				${Else}
+					IntOp $i $i - 1
+				${EndIf}
+			${EndIf}
+		${EndIf}
+		IntOp $i $i + 1
+		Goto loop
+	done:
+	Goto writekeys
+	abort:
+	Abort
+
+	writekeys:
+	; Find available "OPEN" key
+	Var /GLOBAL keyvalue
+	StrCpy $i ""
+	loop2:
+		ReadRegStr $keyvalue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i"
+	${If} $keyvalue == ""
+		; Available OPEN key found
+		WriteRegStr HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i" '"$INSTDIR\${filename}"'
+	${Else}
+		IntOp $i $i + 1
+		Goto loop2
+	${EndIf}
+
+	;Remove any other gaps
+	StrCpy $i ""
+	StrCpy $lastblankkey ""
+	loop3:
+		ReadRegStr $keyvalue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i"
+		${If} $keyvalue == ""
+			${If} $lastblankkey == ""
+				StrCpy $lastblankkey "OPEN$i"
+			${EndIf}
+		${Else}
+			${If} $lastblankkey == "" 
+			${Else}
+				WriteRegStr HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $lastblankkey $keyvalue
+				DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i"
+				StrCpy $lastblankkey "OPEN$i"
+			${EndIf}		
+		${EndIf}
+		IntOp $i $i + 1
+		${If} $i < 1000
+			Goto loop3
+		${EndIf}
+
+
+	; Write install data to registry
+	WriteRegStr HKCU "Software\${displayname}" "InstallDir" $INSTDIR
+	; Install Directory
+	WriteRegStr HKCU "Software\${displayname}" "ExcelCurVer" $xlVerNo
+	; Current Excel Version
+
 	CreateDirectory $INSTDIR\x86
 	CreateDirectory $INSTDIR\x64
-	
 	; ADD FILES HERE
 	File "${filename}"
 	File "${yazdllx86}"
@@ -66,42 +195,6 @@ Section "-Install"
 	File "${libxsltx64}"
 	Rename "${libxsltx64}" "x64\${libxslt}"
 
-	checkversion:
-	; Check Installed Excel Version
-	ReadRegStr $1 HKCR "Excel.Application\CurVer" ""
-
-	${If} $1 == 'Excel.Application.12' ; Excel 2007
-		StrCpy $2 "12.0"
-	${ElseIf} $1 == 'Excel.Application.14' ; Excel 2010
-		StrCpy $2 "14.0"
-	${ElseIf} $1 == 'Excel.Application.15' ; Excel 2013
-		StrCpy $2 "15.0"
-	${ElseIf} $1 == 'Excel.Application.16' ; Excel 2016
-		StrCpy $2 "16.0"
-	${Else}
-		Abort "An appropriate version of Excel is not installed. $\n${displayname} setup will be canceled."
-	${EndIf}
-
-	; Find available "OPEN" key
-	StrCpy $3 ""
-	loop:
-		ReadRegStr $4 HKCU "Software\Microsoft\Office\$2\Excel\Options" "OPEN$3"
-	${If} $4 == ""
-		; Available OPEN key found
-	${Else}
-		IntOp $3 $3 + 1
-		Goto loop
-	${EndIf}
-
-	; Write install data to registry
-	WriteRegStr HKCU "Software\${displayname}" "InstallDir" $INSTDIR
-	; Install Directory
-	WriteRegStr HKCU "Software\${displayname}" "ExcelCurVer" $2
-	; Current Excel Version
-
-	; Write key to install AddIn in Excel Addin Manager
-	WriteRegStr HKCU "Software\Microsoft\Office\$2\Excel\Options" "OPEN$3" '"$INSTDIR\${filename}"'
-
 	; Write keys to uninstall
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${displayname}" "DisplayName" "${displayname}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${displayname}" "UninstallString" '"$INSTDIR\uninstall.exe"'
@@ -115,36 +208,70 @@ SectionEnd
 
 ; Uninstaller Section
 Section "Uninstall"
-StrCpy $INSTDIR "$APPDATA\${displayname}"
-; ADD FILES HERE...
-Delete "$INSTDIR\${filename}"
-Delete "$INSTDIR\x86\*"
-RMDir "$INSTDIR\x86"
-Delete "$INSTDIR\x64\*"
-RMDir "$INSTDIR\x64"
-Delete "$INSTDIR\uninstall.exe"
-
-RMDir "$INSTDIR"
 
 ; Find AddIn Manager Key and Delete
 ; AddIn Manager key name and location may have changed since installation depending on actions taken by user in AddIn Manager.
 ; Need to search for the target AddIn key and delete if found.
-ReadRegStr $2 HKCU "Software\${displayname}" "ExcelCurVer"
-StrCpy $3 ""
+ReadRegStr $xlVerNo HKCU "Software\${displayname}" "ExcelCurVer"
 
+StrLen $namelen "${filename}"
+IntOp $namelen $namelen  * -1
+IntOp $namelen $namelen - 1
+
+StrCpy $i 0
 loop:
-ReadRegStr $4 HKCU "Software\Microsoft\Office\$2\Excel\Options" "OPEN$3"
-${If} $4 == '"$INSTDIR\${filename}"'
-	; Found Key
-	DeleteRegValue HKCU "Software\Microsoft\Office\$2\Excel\Options" "OPEN$3"
-${ElseIf} $4 == ""
-	; Blank Key Found. Addin is no longer installed in AddIn Manager.
-	; Need to delete Addin Manager Reference.
-	DeleteRegValue HKCU "Software\Microsoft\Office\$2\Excel\Add-in Manager" "$INSTDIR\${filename}"
-${Else}
-	IntOp $3 $3 + 1
+	EnumRegValue $keyname HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $i
+	StrCmp $keyname "" done
+	StrCpy $keyprefix $keyname 4
+	${If} $keyprefix == "OPEN"
+		ReadRegStr $openpath HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $keyname
+		StrCpy $openname $openpath "" $namelen
+		StrCpy $openname $openname -1
+		StrCpy $openpath $openpath $namelen
+		StrCpy $openpath $openpath "" 1
+		${If} "$openname" == "${filename}"
+			Delete "$openpath\x86\*"
+			RMDir "$openpath\x86"
+			Delete "$openpath\x64\*"
+			RMDir "$openpath\x64"
+			Delete "$openpath\*"
+			RMDir "$openpath"
+			DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $keyname
+			DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Add-in Manager" "$openpath\${filename}"	
+
+			EnumRegValue $keyname2 HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $i
+			${If} $keyname == $keyname2
+			${Else}
+				IntOp $i $i - 1
+			${EndIf}
+		${EndIf}
+	${EndIf}
+	IntOp $i $i + 1
 	Goto loop
-${EndIf}
+done:
+
+	;Remove any other gaps
+	StrCpy $i ""
+	StrCpy $lastblankkey ""
+	loop3:
+		ReadRegStr $keyvalue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i"
+		${If} $keyvalue == ""
+			${If} $lastblankkey == ""
+				StrCpy $lastblankkey "OPEN$i"
+			${EndIf}
+		${Else}
+			${If} $lastblankkey == "" 
+			${Else}
+				WriteRegStr HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" $lastblankkey $keyvalue
+				DeleteRegValue HKCU "Software\Microsoft\Office\$xlVerNo\Excel\Options" "OPEN$i"
+				StrCpy $lastblankkey "OPEN$i"
+			${EndIf}		
+		${EndIf}
+		IntOp $i $i + 1
+		${If} $i < 1000
+			Goto loop3
+		${EndIf}
+
 
 DeleteRegKey HKCU "Software\${displayname}"
 DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${displayname}"

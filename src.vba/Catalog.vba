@@ -3,7 +3,6 @@ Global oRegEx As Object
 Global oXMLHTTP As Object
 Global oXMLDOM As Object
 Global oConverter As Object
-Global oRegistry As Object
 Global oZConn As LongPtr
 
 Global aExplainFields As Variant
@@ -18,8 +17,7 @@ Global sFileName As String
 Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sRegString = "Software\Excel Local Catalog Lookup"
-Public Const sVersion = "v1.3.5"
+Public Const sVersion = "v1.3.6"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -31,7 +29,7 @@ Public Const sWCZhost = "zcat.oclc.org"
 Public Const sWCZport = 210
 Public Const sWCZDB = "OLUCWorldCat"
 
-Public Const sPluginDir = "Excel Local Catalog Lookup"
+Public Const sRegistryDir = "Excel Catalog Lookup"
 Public Const sYAZdll = "yaz5"
 
 #If Win64 Then
@@ -83,6 +81,12 @@ Private Declare PtrSafe Sub ZOOM_record_destroy Lib "yaz5.dll" Alias "_ZOOM_reco
 
 'Initialize global objects
 Private Sub Initialize()
+    sVer = GetSetting("Excel Catalog Lookup", "General", "Version", "NONE")
+    If sVer = "NONE" Then
+        MigrateSettings
+    End If
+    sPluginDir = Application.AddIns("CatalogLookup").Path
+    
     On Error GoTo ErrHandler
     Set oRegEx = CreateObject("vbscript.regexp")
     With oRegEx
@@ -90,20 +94,63 @@ Private Sub Initialize()
         .Global = True
         .IgnoreCase = True
     End With
-    Set oRegistry = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
     Set oXMLHTTP = CreateObject("MSXML2.ServerXMLHTTP")
     Set oXMLDOM = CreateObject("MSXML2.DomDocument")
     oXMLDOM.SetProperty "SelectionLanguage", "XPath"
     Set oConverter = CreateObject("ADODB.Stream")
     
     SetDefaultDllDirectories (&H1000&)
-    sDllPath = StrConv(Environ("AppData") & "\" & sPluginDir & "\" & sDllVersion & "\", vbUnicode)
+    sDllPath = StrConv(sPluginDir & "\" & sDllVersion & "\", vbUnicode)
     AddDllDirectory (sDllPath)
     LoadLibrary (sYAZdll)
     Exit Sub
 ErrHandler:
     MsgBox ("There was an error initializing the plugin.  Please try again.")
-    End
+End Sub
+
+Sub MigrateSettings()
+    SaveSetting sRegistryDir, "General", "Version", sVersion
+    Set oReg = CreateObject("WScript.Shell")
+    Debug.Print "WScript"
+    On Error Resume Next
+    sAuths = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\CatalogAuth")
+    sFieldSets = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\FieldSets")
+    sURLs = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\CatalogURL")
+    If (InStr(1, sAuths, "|") > 0 And InStr(1, sAuths, ChrW(166)) = 0) Or _
+        (InStr(1, sFieldSets, "|") > 0 And InStr(1, sFieldSets, ChrW(166)) = 0) Then
+        Debug.Print "winmgmts"
+        Set oReg = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
+        oReg.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sAuths
+        oReg.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sFieldSets
+        oReg.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sURLs
+    End If
+    If sURLs <> "" Then
+        aURLs = Split(sURLs, "|")
+        aAuths = Split(sAuths, "|")
+        SaveSetting sRegistryDir, "Sources", "MAX", UBound(aURLs)
+        SaveSetting sRegistryDir, "Sources", "SELECTED", aURLs(0)
+        For i = 0 To UBound(aURLs)
+            SaveSetting sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), aURLs(i)
+            For j = 0 To UBound(aAuths)
+                If InStr(1, aAuths(j), aURLs(i) & ChrW(166)) = 1 Then
+                    sAuthValue = Mid(aAuths(j), Len(aURLs(i)) + 2)
+                    SaveSetting sRegistryDir, "Sources", "AUTH" & Format(i, "000"), sAuthValue
+                End If
+            Next j
+        Next i
+    End If
+    If sFieldSets <> "" Then
+        aFieldSets = Split(sFieldSets, "|")
+        SaveSetting sRegistryDir, "FieldSets", "MAXALL", UBound(aFieldSets)
+        For i = 0 To UBound(aFieldSets)
+            aFieldList = Split(aFieldSets(i), ChrW(166))
+            SaveSetting sRegistryDir, "FieldSets", "NAME" & Format(i, "000"), aFieldList(0)
+            SaveSetting sRegistryDir, "FieldSets", "MAX" & Format(i, "000"), UBound(aFieldList) - 1
+            For j = 1 To UBound(aFieldList)
+                SaveSetting sRegistryDir, "FieldSets", "FIELD" & Format(i, "000") & "-" & Format(j - 1, "000"), aFieldList(j)
+            Next j
+        Next i
+    End If
 End Sub
 
 Function GetLatestVersionNumber()
@@ -148,6 +195,10 @@ Sub LookupInterface(control As IRibbonControl)
         End If
     End If
     
+    If GetSetting(sRegistryDir, "General", "Version", "") = "" Then
+        Initialize
+    End If
+    
     PopulateCombos
     RedrawButtons
     
@@ -170,178 +221,178 @@ Sub LookupInterface(control As IRibbonControl)
     LookupDialog.Show
 End Sub
 
-Function GetRegistryURLs()
-    On Error Resume Next
-    If oRegistry Is Nothing Then
-        Initialize
-    End If
-    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sValue
-    If IsNull(sValue) Then
-        sValue = ""
-    End If
-    GetRegistryURLs = sValue
-    If Err.Number <> 0 Then
-        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", ""
-        GetRegistryURLs = ""
-    End If
-End Function
-
-Sub SetRegistryURLsFromCombo()
-    If oRegistry Is Nothing Then
-        Initialize
-    End If
-    iSelected = LookupDialog.CatalogURLBox.ListIndex
-    sCatalogURLs = LookupDialog.CatalogURLBox.Value
-    addToCombo = True
-    For i = 0 To LookupDialog.CatalogURLBox.ListCount - 1
-        If i <> iSelected Then
-            sCatalogURLs = sCatalogURLs & "|" & LookupDialog.CatalogURLBox.List(i)
+Sub AddURLtoRegistry(sURL)
+    bFoundEmptySlot = False
+    bDuplicate = False
+    iMax = GetSetting(Catalog.sRegistryDir, "Sources", "MAX", -1)
+    For i = 0 To iMax
+        sRegURL = GetSetting(Catalog.sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), "")
+        If sRegURL = "" Then
+            bFoundEmptySlot = True
+            SaveSetting Catalog.sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), sURL
+            Exit For
         End If
-        If LookupDialog.CatalogURLBox.List(i) = LookupDialog.CatalogURLBox.Value Then
-            addToCombo = False
+        If sRegURL = sURL Then
+            bDuplicate = True
+            Exit Sub
         End If
     Next i
-    If addToCombo Then
-        LookupDialog.CatalogURLBox.AddItem LookupDialog.CatalogURLBox.Value
+    If Not bFoundEmptySlot Then
+        iMax = iMax + 1
+        SaveSetting Catalog.sRegistryDir, "Sources", "MAX", iMax
+        SaveSetting Catalog.sRegistryDir, "Sources", "SOURCE" & Format(iMax, "000"), sURL
     End If
-    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogURL", sCatalogURLs
-    
-    sCatalogAuths = GetRegistryAuths
-    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
-    sCatalogAuths = ""
-    For i = 0 To UBound(aCatalogAuths)
-        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
-        If InStr(1, sCatalogURLs, aURLAuth(0)) Then
-            If sCatalogAuths <> "" Then
-                sCatalogAuths = sCatalogAuths & "|"
-            End If
-            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
-        End If
-    Next i
-    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
 End Sub
 
-Function GetRegistryAuths()
-    On Error Resume Next
-    If oRegistry Is Nothing Then
-        Initialize
-    End If
-    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sValue
-    If IsNull(sValue) Then
-        sValue = ""
-    End If
-    GetRegistryAuths = sValue
-    If Err.Number <> 0 Then
-        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", ""
-        GetRegistryAuths = ""
-    End If
-End Function
+Sub RemoveURLfromRegistry(sURL)
+    iMax = GetSetting(Catalog.sRegistryDir, "Sources", "MAX", -1)
+    For i = 0 To iMax
+        sRegURL = GetSetting(Catalog.sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), "")
+        If sURL = sRegURL Then
+            DeleteSetting Catalog.sRegistryDir, "Sources", "SOURCE" & Format(i, "000")
+            If GetSetting(Catalog.sRegistryDir, "Sources", "AUTH" & Format(i, "000"), "") <> "" Then
+                DeleteSetting Catalog.sRegistryDir, "Sources", "AUTH" & Format(i, "000")
+            End If
+        End If
+    Next i
+End Sub
 
 Sub SaveCatalogAuthToRegistry()
-    If oRegistry Is Nothing Then
+    If GetSetting(sRegistryDir, "General", "Version", "NONE") = "NONE" Then
         Initialize
     End If
-    sCatalogAuths = GetRegsistryAuths
-    sCatalogURL = LookupDialog.CatalogURLBox.Text
-    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
-    sCatalogAuths = ""
-    bFound = False
-    For i = 0 To UBound(aCatalogAuths)
-        If i > 0 Then
-            sCatalogAuths = sCatalogAuths & "|"
-        End If
-        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
-        If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
-            bFound = True
-            sCatalogAuths = sCatalogAuths & LookupDialog.CatalogURLBox.Text & ChrW(166) & sAuth
-        Else
-            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
-        End If
-    Next i
-    If Not bFound Then
-        If sCatalogAuths <> "" Then
-            sCatalogAuths = sCatalogAuths & "|"
-        End If
-        sCatalogAuths = sCatalogAuths & sCatalogURL & ChrW(166) & sAuth
-    End If
-        
     
-    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
-End Sub
-
-Sub ClearRegistryAuth()
     sCatalogURL = LookupDialog.CatalogURLBox.Text
-    sCatalogAuths = GetRegistryAuths
-    aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
-    sCatalogAuths = ""
-    For i = 0 To UBound(aCatalogAuths)
-        aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
-        If sCatalogURL <> aURLAuth(0) Then
-            If sCatalogAuths <> "" Then
-                sCatalogAuths = sCatalogAuths & "|"
-            End If
-            sCatalogAuths = sCatalogAuths & aCatalogAuths(i)
+    AddURLtoRegistry (sCatalogURL)
+    iMax = GetSetting(sRegistryDir, "Sources", "MAX", -1)
+    For i = 0 To iMax
+        sRegURL = GetSetting(sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), "")
+        If sCatalogURL = sRegURL Then
+            SaveSetting sRegistryDir, "Sources", "AUTH" & Format(i, "000"), sAuth
         End If
     Next i
-    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sCatalogAuths
 End Sub
 
-Function GetFieldSets()
-    On Error Resume Next
-    If oRegistry Is Nothing Then
-        Initialize
-    End If
-    oRegistry.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sValue
-    If IsNull(sValue) Then
-        sValue = ""
-    End If
-    GetFieldSets = sValue
-     If Err.Number <> 0 Then
-        oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", ""
-        GetFieldSets = ""
+Sub ClearRegistryAuth(sURL)
+    iMax = GetSetting(sRegistryDir, "Sources", "MAX", -1)
+    For i = 0 To iMax
+        sRegURL = GetSetting(sRegistryDir, "Sources", "SOURCE" & Format(i, "000"), "")
+        If sURL = sRegURL Then
+            sRegAuth = GetSetting(sRegistryDir, "Sources", "AUTH" & Format(i, "000"), "")
+            If sRegAuth <> "" Then
+                DeleteSetting Catalog.sRegistryDir, "Sources", "AUTH" & Format(i, "000")
+            End If
+        End If
+    Next i
+End Sub
+ 
+
+Function SaveFieldSet(sSetName)
+    SaveFieldSet = True
+    If LookupDialog.ResultTypeList.ListCount = 0 Then
+        MsgBox ("Please add at least one result type to the set")
+        SaveFieldSet = False
+    Else
+        bFound = False
+        iFoundIndex = -1
+        iGapIndex = -1
+        iMax = GetSetting(sRegistryDir, "FieldSets", "MAXALL", -1)
+        For i = 0 To iMax
+            sRegName = GetSetting(sRegistryDir, "FieldSets", "NAME" & Format(i, "000"), "")
+            If Not bFound And sRegName = "" Then
+                iGapIndex = i
+            End If
+            If Not bFound And sRegName = sSetName Then
+                bFound = True
+                iFoundIndex = i
+            End If
+        Next i
+        If bFound Then
+            iSetMax = GetSetting(sRegistryDir, "FieldSets", "MAX" & Format(iFoundIndex, "000"), -1)
+            For i = 0 To iSetMax
+                DeleteSetting sRegistryDir, "FieldSets", "FIELD" & Format(iFoundIndex, "000") & "-" & Format(i, "000")
+            Next i
+        Else
+            If iGapIndex > -1 Then
+                iFoundIndex = iGapIndex
+            Else
+                iFoundIndex = iMax + 1
+                SaveSetting sRegistryDir, "FieldSets", "MAXALL", iFoundIndex
+            End If
+            SaveSetting sRegistryDir, "FieldSets", "NAME" & Format(iFoundIndex, "000"), sSetName
+        End If
+        iNewSetMax = LookupDialog.ResultTypeList.ListCount - 1
+        SaveSetting sRegistryDir, "FieldSets", "MAX" & Format(iFoundIndex, "000"), iNewSetMax
+        For i = 0 To iNewSetMax
+            sNewField = LookupDialog.ResultTypeList.List(i)
+            SaveSetting sRegistryDir, "FieldSets", "FIELD" & Format(iFoundIndex, "000") & "-" & Format(i, "000"), sNewField
+        Next i
     End If
 End Function
 
-Function SetFieldSets(sSetString As String)
-    If oRegistry Is Nothing Then
-        Initialize
-    End If
-    oRegistry.SetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sSetString
+Sub DeleteFieldSet(sSetName)
+    iMax = CInt(GetSetting(sRegistryDir, "FieldSets", "MAXALL", -1))
+    For i = 0 To iMax
+        sRegName = GetSetting(sRegistryDir, "FieldSets", "NAME" & Format(i, "000"), "")
+        If sRegName = sSetName Then
+            iSetMax = GetSetting(sRegistryDir, "FieldSets", "MAX" & Format(i, "000"), -1)
+            For j = 0 To iSetMax
+                If GetSetting(sRegistryDir, "FieldSets", "MAX" & Format(i, "000"), "NONE") <> "NONE" Then
+                    DeleteSetting sRegistryDir, "FieldSets", "FIELD" & Format(i, "000") & "-" & Format(j, "000")
+                End If
+            Next j
+            If GetSetting(sRegistryDir, "FieldSets", "NAME" & Format(i, "000"), "NONE") <> "NONE" Then
+                DeleteSetting sRegistryDir, "FieldSets", "NAME" & Format(i, "000")
+            End If
+            If GetSetting(sRegistryDir, "FieldSets", "MAX" & Format(i, "000"), "NONE") <> "NONE" Then
+                DeleteSetting sRegistryDir, "FieldSets", "MAX" & Format(i, "000")
+            End If
+            Debug.Print i & "|" & iMax
+            If i = iMax Then
+                SaveSetting sRegistryDir, "FieldSets", "MAXALL", i - 1
+            End If
+        End If
+    Next i
+End Sub
+
+Function GetSourceRegIndex(sSource) As Integer
+    GetSourceRegIndex = -1
+    iURLsMax = GetSetting(sRegistryDir, "Sources", "MAX", 0)
+    For i = 0 To iURLsMax
+        sURL = GetSetting(sRegistryDir, "Sources", "SOURCE" & Format(i, "000"))
+        If sURL = sSource Then
+            GetSourceRegIndex = i
+        End If
+    Next i
 End Function
 
 Sub PopulateCombos()
     Dim sCatalogURL As String
-    On Error Resume Next
-    sCatalogURLs = GetRegistryURLs()
-    sCatalogAuths = GetRegistryAuths()
-    If Err.Number = 0 Then
-        LookupDialog.CatalogURLBox.Clear
-        aCatalogURLs = Split(sCatalogURLs, "|", -1, 0)
-        For i = 0 To UBound(aCatalogURLs)
-            LookupDialog.CatalogURLBox.AddItem aCatalogURLs(i)
-        Next i
-        LookupDialog.CatalogURLBox.ListIndex = 0
-        
-        aCatalogAuths = Split(sCatalogAuths, "|", -1, 0)
-        For i = 0 To UBound(aCatalogAuths)
-            aURLAuth = Split(aCatalogAuths(i), ChrW(166), -1, 0)
-            If aURLAuth(0) = LookupDialog.CatalogURLBox.Text Then
-                sAuth = aURLAuth(1)
-                Exit For
-            End If
-        Next i
-    End If
-
-    sFieldSets = GetFieldSets()
-    If Err.Number = 0 Then
-        LookupDialog.FieldSetList.Clear
-        aFieldSets = Split(sFieldSets, "|", -1, 0)
-        For i = 0 To UBound(aFieldSets)
-            aFields = Split(aFieldSets(i), ChrW(166), -1, 0)
-            LookupDialog.FieldSetList.AddItem aFields(0)
-        Next i
-    End If
     
+    LookupDialog.CatalogURLBox.Clear
+    iURLsMax = GetSetting(sRegistryDir, "Sources", "MAX", -1)
+    
+    For i = 0 To iURLsMax
+        sURL = GetSetting(sRegistryDir, "Sources", "SOURCE" & Format(i, "000"))
+        If sURL <> "" Then
+            LookupDialog.CatalogURLBox.AddItem sURL
+        End If
+    Next i
+    
+    sSelected = GetSetting(sRegistryDir, "Sources", "SELECTED", "")
+    iSelected = GetSourceRegIndex(sSelected)
+    LookupDialog.CatalogURLBox.Value = sSelected
+    sAuth = GetSetting(sRegistryDir, "Sources", "AUTH" & Format(iSelected, "000"), "")
+
+    LookupDialog.FieldSetList.Clear
+    iFieldSetsMax = GetSetting(sRegistryDir, "FieldSets", "MAXALL", 0)
+    For i = 0 To iFieldSetsMax
+        sName = GetSetting(sRegistryDir, "FieldSets", "NAME" & Format(i, "000"), "")
+        If sName <> "" Then
+            LookupDialog.FieldSetList.AddItem sName
+        End If
+    Next i
+
     PopulateSourceDependentOptions
     
     Dim aOtherSources(4, 2) As Variant
@@ -811,7 +862,7 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
     oConverter.Position = 0
     oConverter.Charset = "ISO-8859-1"
     sQuery = oConverter.ReadText
-    sQuery = Replace(sQuery, "ï»¿", "") 'BOM
+    sQuery = Replace(sQuery, ChrW(239) & ChrW(187) & ChrW(191), "") 'BOM
     oConverter.Close
     
     sSearchIndex = "1016"
@@ -1053,7 +1104,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Set oLCCNs = oRegEx.Execute(sCurrentRecord)
                         If oLCCNs.Count > 0 Then
                             sLCCNs = oLCCNs(0).Submatches(0)
-                            sLCCNs = Replace(sLCCNs, """,""", Chr(166))
+                            sLCCNs = Replace(sLCCNs, """,""", ChrW(166))
                             sLCCNs = Replace(sLCCNs, """", "")
                             ExtractField = ExtractField & sLCCNs
                         Else
@@ -1064,7 +1115,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Set oISBNs = oRegEx.Execute(sCurrentRecord)
                         If oISBNs.Count > 0 Then
                             sISBNs = oISBNs(0).Submatches(0)
-                            sISBNs = Replace(sISBNs, """,""", Chr(166))
+                            sISBNs = Replace(sISBNs, """,""", ChrW(166))
                             sISBNs = Replace(sISBNs, """", "")
                             ExtractField = ExtractField & sISBNs
                         Else
@@ -1075,7 +1126,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Set oOCLCs = oRegEx.Execute(sCurrentRecord)
                         If oOCLCs.Count > 0 Then
                             sOCLCs = oOCLCs(0).Submatches(0)
-                            sOCLCs = Replace(sOCLCs, """,""", Chr(166))
+                            sOCLCs = Replace(sOCLCs, """,""", ChrW(166))
                             sOCLCs = Replace(sOCLCs, """", "")
                             ExtractField = ExtractField & sOCLCs
                         Else
@@ -1130,7 +1181,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                                 sRecapLoc = Replace(sRecapLoc, "scsb", "")
                             End If
                             If sCGD <> "" Then
-                                sCGD = sCGD & Chr(166)
+                                sCGD = sCGD & ChrW(166)
                             End If
                             sCGD = sCGD & sRecapLoc & "-" & oCGD(i).Submatches(4) & "-" & oCGD(i).Submatches(3)
                             If oCGD(i).Submatches(2) <> "" Then
@@ -1498,7 +1549,7 @@ Function CollapseIPLCHoldings(sHoldings)
     sResult = ""
     aHoldingsA = Split(sHoldings, "|")
     For i = 0 To UBound(aHoldingsA)
-        aHoldingsB = Split(aHoldingsA(i), Chr(166))
+        aHoldingsB = Split(aHoldingsA(i), ChrW(166))
         For j = 0 To UBound(aHoldingsB)
             sHCode = aHoldingsB(j)
             sHCode = Replace(sHCode, "ISIL:", "")
