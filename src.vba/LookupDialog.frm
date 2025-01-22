@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{BBD88BC8-B169-47E0-A847-58607BEF79A6}{8FCBE8F8-6B80-4F95-A94B-06617BEF074F}"
+Attribute VB_Base = "0{B22F997B-D981-4EF5-8D0F-AEBC1352CE11}{819849B4-4BE9-456F-91DB-99A6D7F1C551}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -44,15 +44,17 @@ Private Sub CancelButton_Click()
 End Sub
 
 Private Sub CatalogURLBox_Change()
-    Catalog.sAuth = ""
-    iSelected = Catalog.GetSourceRegIndex(CatalogURLBox.Value)
-    sAuth = GetSetting(Catalog.sRegistryDir, "Sources", "AUTH" & Format(iSelected, "000"), "")
-    SaveSetting Catalog.sRegistryDir, "Sources", "SELECTED", CatalogURLBox.Value
-    Catalog.bIsAlma = True
-    If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
-        Catalog.bIsAlma = False
+    If CatalogURLBox.Value <> "" Then
+        Catalog.sAuth = ""
+        iSelected = Catalog.GetSourceRegIndex(CatalogURLBox.Value)
+        sAuth = GetSetting(Catalog.sRegistryDir, "Sources", "AUTH" & Format(iSelected, "000"), "")
+        SaveSetting Catalog.sRegistryDir, "Sources", "SELECTED", CatalogURLBox.Value
+        Catalog.bIsAlma = True
+        If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
+            Catalog.bIsAlma = False
+        End If
+        Catalog.PopulateSourceDependentOptions
     End If
-    Catalog.PopulateSourceDependentOptions
 End Sub
 
 Private Sub ClearCredentialsButton_Click()
