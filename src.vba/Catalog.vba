@@ -17,7 +17,7 @@ Global sFileName As String
 Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sVersion = "v1.3.6"
+Public Const sVersion = "v1.3.7"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -453,6 +453,7 @@ Sub PopulateSourceDependentOptions()
     
     If LookupDialog.CatalogURLBox = "source:worldcat" Then
         LookupDialog.ResultTypeCombo.AddItem "WorldCat Holdings"
+        LookupDialog.ResultTypeCombo.AddItem "Holdings Count"
     End If
     
     LookupDialog.SearchFieldCombo.Clear
@@ -1542,6 +1543,21 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
     End If
     If sResultType = "999$sp" Then
         ExtractField = CollapseIPLCHoldings(ExtractField)
+    End If
+    If LookupDialog.CatalogURLBox.Value = "source:worldcat" And sResultTypeAll = "948$c#" Then
+        sCodesDeDupe = ""
+        iCodeCount = 0
+        aCodesA = Split(ExtractField, "|")
+        For i = 0 To UBound(aCodesA)
+            aCodesB = Split(aCodesA(i), ChrW(166))
+            For j = 0 To UBound(aCodesB)
+                If InStr(1, sCodesDeDupe, aCodesB(j)) = 0 Then
+                   sCodesDeDupe = sCodesDeDupe & aCodesB(j) & "|"
+                   iCodeCount = iCodeCount + 1
+                End If
+            Next j
+        Next i
+        ExtractField = CStr(iCodeCount)
     End If
 End Function
 
