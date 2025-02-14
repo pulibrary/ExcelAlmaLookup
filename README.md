@@ -1,5 +1,5 @@
 # Excel Alma Lookup
-An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. Selected non-Alma catalogs can also be searched, such as WorldCat, Library of Congress, ReCAP, and IPLC ReShare.
+An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. Selected non-Alma catalogs can also be searched, such as WorldCat, Library of Congress, ReCAP, and BorrowDirect.
 
 **NEW!** We are interested in suggestions for what features to develop next for this tool.  Please let us know your thoughts in the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/discussions).
 
