@@ -97,6 +97,9 @@ A small dialog box will show the progress of the query.  You can terminate it at
 
 You can use the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/discussions) or open an [issue](https://github.com/pulibrary/ExcelAlmaLookup/issues) if you would like to request features, report bugs, or ask general questions.
 
+### Troubleshooting/Known Issues
+- Some users have reported that WorldCat queries always return FALSE.  If you experience this issue, please ask your IT department to configure your firewall to allow connections to zcat.oclc.org on port 210.
+
 ## Example
 This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
 
