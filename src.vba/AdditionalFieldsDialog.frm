@@ -1,5 +1,5 @@
 Attribute VB_Name = "AdditionalFieldsDialog"
-Attribute VB_Base = "0{9508A44C-2F3B-446F-9BDF-0F8DB2BD2AEB}{7F5DA57A-A81B-4BCF-B7CC-9C079F088481}"
+Attribute VB_Base = "0{D176703C-DF46-4758-81B9-CF69A44287C0}{E136E954-37A7-454C-9CB4-B48476EA4AC9}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -11,10 +11,12 @@ Private Sub PopulateSearchField()
     If i = -1 Then
         MsgBox ("No field is selected")
     Else
-        sIndex = AdditionalFieldsDialog.SRUFields.List(i, 1)
-        LookupDialog.SearchFieldCombo.Value = sIndex
-        LookupDialog.SearchFieldCombo.AddItem sIndex
+        With LookupDialog.SearchFieldCombo
+            .AddItem AdditionalFieldsDialog.SRUFields.List(i, 1), .ListCount - 1
+            .ListIndex = .ListCount - 2
+        End With
     End If
+    Catalog.PopulateOperatorCombo
 End Sub
 
 Private Sub CancelAdditionalField_Click()

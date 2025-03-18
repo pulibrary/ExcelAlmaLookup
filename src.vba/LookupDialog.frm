@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{7A05F4D9-C4BC-4BE9-BDA5-95E6D123FAF4}{7B9F8AE6-6A5E-4690-AFE5-AA7259C9336A}"
+Attribute VB_Base = "0{5C2F9962-564B-4ECC-8EC8-CD4944F6946F}{CC32C219-D702-4EB2-B386-C7EE4E6ACD6A}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -25,6 +25,20 @@ Private Sub AddResultButton_Click()
             End If
         End If
     End With
+End Sub
+
+Private Sub AddSearchButton_Click()
+    If SearchFieldCombo.Value = "" Or OperatorCombo.Value = "" Or SearchValueBox.Value = "" Then
+        MsgBox ("Please make sure the search type, operator, and value are all filled in.")
+    End If
+    SearchListBox.AddItem ""
+    iIndex = SearchListBox.ListCount - 1
+    SearchListBox.List(iIndex, 0) = BooleanCombo.Value
+    SearchListBox.List(iIndex, 1) = SearchFieldCombo.Value
+    SearchListBox.List(iIndex, 2) = OperatorCombo.Value
+    SearchListBox.List(iIndex, 3) = SearchValueBox.Value
+    LookupDialog.BooleanCombo.Enabled = True
+    LookupDialog.BooleanCombo.ListIndex = 0
 End Sub
 
 Private Sub AddURLButton_Click()
@@ -106,6 +120,7 @@ Private Function LoadSet(sSetName As String) As Boolean
     Next i
     LoadSet = False
 End Function
+
 
 Private Sub HelpButton_Click()
     ThisWorkbook.FollowHyperlink Catalog.sRepoURL & "#readme"
@@ -239,6 +254,7 @@ Private Sub OKButton_Click()
         SearchingDialog.ProgressLabel = "Row 1 of " & iTotal
         SearchingDialog.Show
         'Iterate through rows, look up in catalog
+        bIgnoreHeader = LookupDialog.IgnoreHeaderCheckbox.Value
         For i = iStartIndex To iTotal
             If Catalog.bTerminateLoop = True Then
                 Exit For
@@ -247,27 +263,23 @@ Private Sub OKButton_Click()
                 SearchingDialog.ProgressLabel = "Row " & i & " of " & iTotal
                 Application.ScreenUpdating = False
                 Dim sSearchString As String
-                sSearchString = oSourceRange.Cells(i, 1).Value
-                sSearchString = Replace(sSearchString, ChrW(160), " ")
-                sSearchString = Replace(sSearchString, ChrW(166), "|")
-                sSearchString = Trim(sSearchString)
-                If sSearchString <> "" Then
-                    If sSearchString = "FALSE" Then
-                        sResultRec = ""
-                        sResultHold = ""
-                    Else
-                        sResultRec = Catalog.Lookup(sSearchString, sCatalogURL)
-                        iHoldingsStart = InStr(2, sResultRec, "<?xml")
-                        If iHoldingsStart > 0 Then
-                            sResultHold = Mid(sResultRec, iHoldingsStart)
-                            sResultRec = Left(sResultRec, iHoldingsStart - 1)
-                        End If
+                Set oSearchRow = oSourceRange.Rows(i).EntireRow
+                If i = iStartIndex And bIgnoreHeader Then
+                    sResultRec = "HEADER"
+                Else
+                    sResultRec = Catalog.Lookup(oSearchRow, sCatalogURL)
+                End If
+                If sResultRec <> "" Then
+                    iHoldingsStart = InStr(2, sResultRec, "<?xml")
+                    If iHoldingsStart > 0 Then
+                        sResultHold = Mid(sResultRec, iHoldingsStart)
+                        sResultRec = Left(sResultRec, iHoldingsStart - 1)
                     End If
                     For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
                         Dim stype As String
                         stype = LookupDialog.ResultTypeList.List(j)
                         stype = Replace(stype, "*", "")
-                        If i = 1 And LookupDialog.IgnoreHeaderCheckbox.Value = True Then
+                        If i = iStartIndex And bIgnoreHeader Then
                             sResult = ""
                             If LookupDialog.GenerateHeaderCheckBox.Value = True Then
                                 sResult = stype
@@ -377,10 +389,20 @@ NextRow:
     
 End Sub
 
+Private Sub OperatorCombo_Change()
+    If OperatorCombo.Value = "empty" Then
+        SearchValueBox.Value = "is empty"
+        SearchValueBox.Enabled = False
+    ElseIf SearchValueBox.Enabled = False Then
+        SearchValueBox.Value = ""
+        SearchValueBox.Enabled = True
+    End If
+End Sub
 
 Private Sub OtherSourcesButton_Click()
     OtherSourcesDialog.Show
 End Sub
+
 
 Private Sub RemoveResultButton_Click()
     With LookupDialog.ResultTypeList
@@ -389,6 +411,18 @@ Private Sub RemoveResultButton_Click()
         End If
     End With
     RedrawButtons
+End Sub
+
+Private Sub RemoveSearchButton_Click()
+    iSelected = LookupDialog.SearchListBox.ListIndex
+    If iSelected > -1 Then
+        LookupDialog.SearchListBox.RemoveItem (iSelected)
+    End If
+    If LookupDialog.SearchListBox.ListIndex = -1 Then
+        LookupDialog.RemoveSearchButton.Enabled = False
+        LookupDialog.BooleanCombo.Enabled = False
+        LookupDialog.BooleanCombo.Value = ""
+    End If
 End Sub
 
 Private Sub RemoveURLButton_Click()
@@ -430,4 +464,34 @@ Private Sub SaveSetButton_Click()
         Exit Sub
     End If
     bSuccess = Catalog.SaveFieldSet(LookupDialog.FieldSetList.Value)
+End Sub
+Private Sub SearchFieldCombo_Change()
+    sField = LookupDialog.SearchFieldCombo.Value
+    If sField = "Other fields..." Then
+        AdditionalFieldsDialog.FilterBox.Value = ""
+        If Not IsNull(aExplainFields) Then
+            AdditionalFieldsDialog.SRUFields.List = aExplainFields
+            AdditionalFieldsDialog.Show
+        End If
+    End If
+End Sub
+
+Private Sub SearchFieldCombo_AfterUpdate()
+    Catalog.PopulateOperatorCombo
+End Sub
+
+Private Sub SearchListBox_Click()
+    If LookupDialog.SearchListBox.ListIndex > -1 Then
+        LookupDialog.RemoveSearchButton.Enabled = True
+    Else
+        LookupDialog.RemoveSearchButton.Enabled = False
+    End If
+End Sub
+
+Private Sub SearchValueBox_Change()
+    If LookupDialog.SearchValueBox.Value <> "" Then
+        LookupDialog.AddSearchButton.Enabled = True
+    Else
+        LookupDialog.AddSearchButton.Enabled = False
+    End If
 End Sub

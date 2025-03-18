@@ -12,12 +12,13 @@ Global bIsoholdEnabled  As Boolean
 Global bIsAlma As Boolean
 Global sCatalogURL As String
 Global sAuth As String
+Global aAlmaSearchKeys As Variant
 
 Global sFileName As String
 Global sSheetName As String
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sVersion = "v1.3.7"
+Public Const sVersion = "v1.4.0"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -103,6 +104,7 @@ Private Sub Initialize()
     sDllPath = StrConv(sPluginDir & "\" & sDllVersion & "\", vbUnicode)
     AddDllDirectory (sDllPath)
     LoadLibrary (sYAZdll)
+    
     Exit Sub
 ErrHandler:
     MsgBox ("There was an error initializing the plugin.  Please try again.")
@@ -111,14 +113,12 @@ End Sub
 Sub MigrateSettings()
     SaveSetting sRegistryDir, "General", "Version", sVersion
     Set oReg = CreateObject("WScript.Shell")
-    Debug.Print "WScript"
     On Error Resume Next
     sAuths = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\CatalogAuth")
     sFieldSets = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\FieldSets")
     sURLs = oReg.RegRead("HKEY_CURRENT_USER\Software\Excel Local Catalog Lookup\CatalogURL")
     If (InStr(1, sAuths, "|") > 0 And InStr(1, sAuths, ChrW(166)) = 0) Or _
         (InStr(1, sFieldSets, "|") > 0 And InStr(1, sFieldSets, ChrW(166)) = 0) Then
-        Debug.Print "winmgmts"
         Set oReg = GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
         oReg.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "CatalogAuth", sAuths
         oReg.GetStringValue HKEY_CURRENT_USER, "Software\Excel Local Catalog Lookup", "FieldSets", sFieldSets
@@ -208,8 +208,9 @@ Sub LookupInterface(control As IRibbonControl)
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
     sSourceRange = Selection.Address
     LookupDialog.LookupRange.Value = sSourceRange
-    
-    
+    sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
+    LookupDialog.SearchValueBox.Value = "[[" & sSourceColumn & "]]"
+
     sLatestVersion = GetLatestVersionNumber
     If sLatestVersion = sVersion Then
         LookupDialog.VersionLabel.Caption = "You are using the latest version. (" & sVersion & ")"
@@ -347,7 +348,6 @@ Sub DeleteFieldSet(sSetName)
             If GetSetting(sRegistryDir, "FieldSets", "MAX" & Format(i, "000"), "NONE") <> "NONE" Then
                 DeleteSetting sRegistryDir, "FieldSets", "MAX" & Format(i, "000")
             End If
-            Debug.Print i & "|" & iMax
             If i = iMax Then
                 SaveSetting sRegistryDir, "FieldSets", "MAXALL", i - 1
             End If
@@ -393,7 +393,8 @@ Sub PopulateCombos()
         End If
     Next i
 
-    PopulateSourceDependentOptions
+    LookupDialog.BooleanCombo.AddItem "AND"
+    LookupDialog.BooleanCombo.AddItem "OR"
     
     Dim aOtherSources(4, 2) As Variant
     aOtherSources(0, 0) = "source:recap"
@@ -405,8 +406,10 @@ Sub PopulateCombos()
     aOtherSources(3, 0) = "source:worldcat"
     aOtherSources(3, 1) = "WorldCat"
 
-    
     OtherSourcesDialog.OtherSourcesListBox.List = aOtherSources
+
+    PopulateSourceDependentOptions
+
 End Sub
 
 Sub PopulateSourceDependentOptions()
@@ -471,29 +474,103 @@ Sub PopulateSourceDependentOptions()
                 LookupDialog.SearchFieldCombo.AddItem "ISSN"
             End If
             LookupDialog.SearchFieldCombo.AddItem "OCLC No."
-
+                        
         Else
             LookupDialog.SearchFieldCombo.Enabled = False
         End If
-        
-        LookupDialog.AdditionalFieldsButton.Enabled = False
+        LookupDialog.BooleanCombo.Enabled = False
+        LookupDialog.BooleanCombo.Value = ""
+        LookupDialog.OperatorCombo.Enabled = False
+        LookupDialog.OperatorCombo.Value = "="
+        LookupDialog.SearchValueBox.Enabled = False
+        LookupDialog.SearchListBox.Clear
+        LookupDialog.SearchListBox.Enabled = False
+        sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
+        LookupDialog.SearchValueBox.Value = "[[" & sSourceColumn & "]]"
     Else
         LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
+        LookupDialog.SearchFieldCombo.Clear
         LookupDialog.SearchFieldCombo.Enabled = True
-        LookupDialog.AdditionalFieldsButton.Enabled = True
-        LookupDialog.SearchFieldCombo.AddItem "Keywords"
-        LookupDialog.SearchFieldCombo.AddItem "Call No."
-        LookupDialog.SearchFieldCombo.AddItem "Title"
-        LookupDialog.SearchFieldCombo.AddItem "ISBN"
-        LookupDialog.SearchFieldCombo.AddItem "ISSN"
-        LookupDialog.SearchFieldCombo.AddItem "MMS ID"
-        LookupDialog.SearchFieldCombo.AddItem "Barcode"
+        ReDim aAlmaSearchKeys(7, 2) As Variant
+        aAlmaSearchKeys(0, 0) = "Keywords"
+        aAlmaSearchKeys(0, 1) = "alma.all_for_ui"
+        aAlmaSearchKeys(1, 0) = "Call No."
+        aAlmaSearchKeys(1, 1) = "alma.PermanentCallNumber"
+        aAlmaSearchKeys(2, 0) = "Title"
+        aAlmaSearchKeys(2, 1) = "alma.title"
+        aAlmaSearchKeys(3, 0) = "ISBN"
+        aAlmaSearchKeys(3, 1) = "alma.isbn"
+        aAlmaSearchKeys(4, 0) = "ISSN"
+        aAlmaSearchKeys(4, 1) = "alma.issn"
+        aAlmaSearchKeys(5, 0) = "MMS ID"
+        aAlmaSearchKeys(5, 1) = "rec.id"
+        aAlmaSearchKeys(6, 0) = "Barcode"
+        aAlmaSearchKeys(6, 1) = "alma.barcode"
+        For i = 0 To UBound(aAlmaSearchKeys) - 1
+            LookupDialog.SearchFieldCombo.AddItem aAlmaSearchKeys(i, 0)
+        Next i
+        LookupDialog.SearchFieldCombo.AddItem "Other fields..."
+        LookupDialog.SearchFieldCombo.ListIndex = 0
+        
+        LookupDialog.BooleanCombo.Enabled = True
+        LookupDialog.OperatorCombo.Enabled = True
+        LookupDialog.SearchValueBox.Enabled = True
+        LookupDialog.SearchListBox.Enabled = True
+        
+        PopulateOperatorCombo
+    End If
+    If LookupDialog.SearchFieldCombo.ListCount > 0 Then
         LookupDialog.SearchFieldCombo.ListIndex = 0
     End If
-    LookupDialog.SearchFieldCombo.ListIndex = 0
     LookupDialog.ResultTypeCombo.ListIndex = 0
 
 End Sub
+
+Sub PopulateOperatorCombo()
+    If Not bIsAlma Then
+        Exit Sub
+    End If
+    LookupDialog.OperatorCombo.Clear
+    sKey = GetAlmaSearchKey(LookupDialog.SearchFieldCombo.Value)
+    bFound = False
+    If IsEmpty(aExplainFields) Then
+        aExplainFields = GetAllFields()
+    End If
+    If UBound(aExplainFields) = 0 Then
+        LookupDialog.OperatorCombo.Enabled = False
+        Exit Sub
+    End If
+    sDefaultValue = "="
+    For i = 0 To UBound(aExplainFields)
+        If sKey = aExplainFields(i, 1) Then
+            aOperators = aExplainFields(i, 2)
+            For j = 0 To UBound(aOperators)
+                sOperator = aOperators(j)
+                If sOperator = "" Then
+                    sOperator = "empty"
+                End If
+                LookupDialog.OperatorCombo.AddItem sOperator
+            Next j
+            bFound = True
+        End If
+        If bFound Then
+            Exit For
+        End If
+    Next i
+    If bFound Then
+        LookupDialog.OperatorCombo.Value = sDefaultValue
+    End If
+End Sub
+
+Function GetAlmaSearchKey(sPhrase As String) As String
+    sKey = sPhrase
+    For i = 0 To UBound(aAlmaSearchKeys)
+        If sPhrase = aAlmaSearchKeys(i, 0) Then
+            sKey = aAlmaSearchKeys(i, 1)
+        End If
+    Next i
+    GetAlmaSearchKey = sKey
+End Function
 
 Sub RedrawButtons()
     With LookupDialog
@@ -595,61 +672,97 @@ Private Function EncodeByte(val As Integer) As String
     EncodeByte = res
 End Function
 
-Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String) As String
+Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String, bAdvancedSearch As Boolean, oQueryRow As Range) As String
     sURL = sBaseURL & "?operation=searchRetrieve&version=1.2&maximumRecords=" & iMaximumRecords & "&query="
-    sQuery1 = Replace(sQuery1, "http://", "")
-    sQuery = EncodeURI(sQuery1)
-    sIndex = ""
-    Select Case sSearchType
-
-    Case "Keywords"
-        sIndex = "alma.all_for_ui"
-    Case "Call No."
-        sIndex = "alma.PermanentCallNumber"
-    Case "MMS ID"
-        sIndex = "rec.id"
-    Case "Title"
-        sIndex = "alma.title"
-    Case "ISBN"
-        sQuery = NormalizeISBN(sQuery1)
-        If sQuery = "" Then
-            sQuery = "FALSE"
-        End If
-        sIndex = "alma.isbn"
-    Case "ISSN"
-        sQuery = NormalizeISSN(sQuery1)
-        If sQuery = "" Then
-            sQuery = "FALSE"
-        End If
-        sIndex = "alma.issn"
-    Case "Barcode"
-        sIndex = "alma.barcode"
-        sQuery = Replace(sQuery1, " ", "")
-    Case Else
-        sIndex = sSearchType
-    End Select
-    Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
-        sQuery = Replace(sQuery, "||", "|")
-        sQuery = Replace(sQuery, "%7C%7C", "%7C")
-    Loop
-    If Right(sQuery, 1) = "|" Then
-        sQuery = Left(sQuery, Len(sQuery) - 1)
+    
+    iSearchTermsCount = 1
+    If bAdvancedSearch Then
+        iSearchTermsCount = LookupDialog.SearchListBox.ListCount
     End If
-    If Right(sQuery, 3) = "%7C" Then
-        sQuery = Left(sQuery, Len(sQuery) - 3)
-    End If
-    sQuery = Replace(sQuery, "|", "%22+OR+" & sIndex & "+%3D+%22")
-    sQuery = Replace(sQuery, "%7C", "%22+OR+" & sIndex & "+%3D+%22")
-    sURL = sURL & sIndex
-    If sIndex = "alma.PermanentCallNumber" Then
-        sURL = sURL & "+all+"
+    
+    Dim aSearchTerms() As Variant
+    ReDim aSearchTerms(iSearchTermsCount, 4)
+    
+    Dim sIndex As String
+    
+    If Not bAdvancedSearch Then
+        sIndex = GetAlmaSearchKey(sSearchType)
+        aSearchTerms(0, 0) = ""
+        aSearchTerms(0, 1) = sSearchType
+        aSearchTerms(0, 2) = "="
+        If sSearchType = "alma.PermanentCallNumber" Then
+            aSearchTerms(0, 2) = "all"
+        End If
+        aSearchTerms(0, 3) = sQuery1
     Else
-        sURL = sURL & "+%3D+"
+        With LookupDialog.SearchListBox
+            For i = 0 To iSearchTermsCount - 1
+              aSearchTerms(i, 0) = .List(i, 0)
+              aSearchTerms(i, 1) = .List(i, 1)
+              aSearchTerms(i, 2) = .List(i, 2)
+              aSearchTerms(i, 3) = .List(i, 3)
+            Next i
+        End With
     End If
-    sURL = sURL & "%22" + sQuery + "%22"
+    
+    For i = 0 To UBound(aSearchTerms) - 1
+        sBoolean = aSearchTerms(i, 0)
+        sIndex = aSearchTerms(i, 1)
+        sIndex = GetAlmaSearchKey(sIndex)
+        sOperator = aSearchTerms(i, 2)
+        Dim sQuery As String
+        sQuery = CStr(aSearchTerms(i, 3))
+        sQuery = GetColumnContents(oQueryRow, sQuery)
+        sQuery = Replace(sQuery, "http://", "")
+        sQuery = Replace(sQuery, "-", " ")
+        sQuery = Replace(sQuery, "_", " ")
+        If Trim(sQuery) = "" Then
+            GoTo NextTerm
+        End If
+        If sBoolean <> "" Then
+            sURL = sURL & "+" & sBoolean & "+"
+        End If
+        Select Case sIndex
+            Case "alma.isbn"
+                sQuery = NormalizeISBN(sQuery)
+                If sQuery = "" Then
+                    sQuery = "FALSE"
+                End If
+            Case "alma.issn"
+                sQuery = NormalizeISSN(sQuery)
+                If sQuery = "" Then
+                    sQuery = "FALSE"
+                End If
+            Case "alma.barcode"
+                sQuery = Replace(sQuery, " ", "")
+        End Select
+        Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
+            sQuery = Replace(sQuery, "||", "|")
+            sQuery = Replace(sQuery, "%7C%7C", "%7C")
+        Loop
+        If Right(sQuery, 1) = "|" Then
+            sQuery = Left(sQuery, Len(sQuery) - 1)
+        End If
+        If Right(sQuery, 3) = "%7C" Then
+            sQuery = Left(sQuery, Len(sQuery) - 3)
+        End If
+        If InStr(1, sQuery, "|") Or InStr(1, sQuery, "%7C") Then
+            sQuery = Replace(sQuery, "|", "%22+OR+" & sIndex & "+" & sOperator & "+%22")
+            sQuery = Replace(sQuery, "%7C", "%22+OR+" & sIndex & "+" & sOperator & "+%22")
+            sURL = sURL & "(+" & sIndex & "+" & sOperator & "+%22" + EncodeURI(sQuery) + "%22+)"
+        Else
+            If sOperator = "empty" Then
+                sURL = sURL & sIndex & "+==+%22%22"
+            Else
+                sURL = sURL & sIndex & "+" & sOperator & "+%22" + EncodeURI(sQuery) + "%22"
+            End If
+        End If
+NextTerm:
+    Next i
     If Not LookupDialog.IncludeSuppressed Then
         sURL = sURL & "+AND+alma.mms_tagSuppressed=false"
     End If
+    Debug.Print sURL
     ConstructURL = sURL
 End Function
 
@@ -769,8 +882,17 @@ Function GetAllFields()
         sLabel = aFields(i).SelectSingleNode("ns:title").Text
         sIndexCode = aFields(i).SelectSingleNode("xpl:map/xpl:name").Text
         sIndexSet = aFields(i).SelectSingleNode("xpl:map/xpl:name/@set").Text
+        Dim oOperatorGroup As Variant
+        Set oOperatorGroup = aFields(i).SelectNodes("xpl:configInfo/xpl:supports")
+        Dim aOperators() As String
+        ReDim aOperators(oOperatorGroup.length - 1)
+        For j = 0 To oOperatorGroup.length - 1
+            aOperators(j) = oOperatorGroup.Item(j).Text
+        Next j
+
         aFieldMap(i, 0) = sLabel
         aFieldMap(i, 1) = sIndexSet & "." & sIndexCode
+        aFieldMap(i, 2) = aOperators
     Next i
     
     For i = 0 To UBound(aFieldMap)
@@ -780,14 +902,16 @@ Function GetAllFields()
             If UCase(SearchI > SearchJ) Then
                 t1 = aFieldMap(j, 0)
                 t2 = aFieldMap(j, 1)
+                t3 = aFieldMap(j, 2)
                 aFieldMap(j, 0) = aFieldMap(i, 0)
                 aFieldMap(j, 1) = aFieldMap(i, 1)
+                aFieldMap(j, 2) = aFieldMap(i, 2)
                 aFieldMap(i, 0) = t1
                 aFieldMap(i, 1) = t2
+                aFieldMap(i, 2) = t3
             End If
         Next j
     Next i
-    
     GetAllFields = aFieldMap
 End Function
 
@@ -931,9 +1055,41 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
     'ZOOM_resultset_destroy (zrs)
 End Function
 
-Function Lookup(sQuery1 As String, sCatalogURL As String) As String
+Function GetColumnContents(ByVal oRow As Range, sValue As String) As String
+    oRegEx.Pattern = "^\[\[[A-Z]+\]\]$"
+    If oRegEx.Test(sValue) Then
+        sValue = Replace(sValue, "[[", "")
+        sValue = Replace(sValue, "]]", "")
+        sValue = CStr(oRow.Cells(1, Cells(1, sValue).Column).Value)
+    End If
+    sValue = Replace(sValue, ChrW(160), " ")
+    sValue = Replace(sValue, ChrW(166), "|")
+    sValue = Trim(sValue)
+    GetColumnContents = sValue
+End Function
+
+Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
     If oXMLHTTP Is Nothing Then
         Initialize
+    End If
+    
+    Dim bAdvancedSearch As Boolean
+    bAdvancedSearch = False
+    If bIsAlma And LookupDialog.SearchListBox.ListCount > 0 Then
+        bAdvancedSearch = True
+    End If
+    
+    Dim sQuery1 As String
+    sQuery1 = ""
+    
+    If Not bAdvancedSearch Then
+        Dim sSearchString As String
+        sSearchString = GetColumnContents(sQueryRow, LookupDialog.SearchValueBox.Value)
+        If sSearchString = "FALSE" Or sSearchString = "" Then
+            Lookup = ""
+            Exit Function
+        End If
+        sQuery1 = sSearchString
     End If
     
     Dim sSearchType As String
@@ -941,7 +1097,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     Dim sFormat As String
     sURL = ""
     
-    If LookupDialog.ValidateCheckBox.Value Then
+    If LookupDialog.ValidateCheckBox.Value And Not bAdvancedSearch Then
         If sSearchType = "ISBN" Then
             Dim sISBN As String
             sISBN = NormalizeISBN(sQuery1)
@@ -991,7 +1147,7 @@ Function Lookup(sQuery1 As String, sCatalogURL As String) As String
     ElseIf sCatalogURL = "source:worldcat" Then
         sURL = "z3950"
     Else
-        sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType)
+        sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType, bAdvancedSearch, sQueryRow)
     End If
     sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
@@ -1068,7 +1224,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
 
     End If
     If LookupDialog.CatalogURLBox.Value = "source:recap" Then
-        Set oRegEx = CreateObject("vbscript.regexp")
         oRegEx.Global = True
         oRegEx.Pattern = "[\[,]{""id"":""([^""]*)"""
         
@@ -1377,7 +1532,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                           oRegEx.Pattern = "<subfield code=.6.>[^<]*</subfield>"
                           sRecord = oRegEx.Replace(sRecord, "")
                        End If
-                       
                        oRegEx.Pattern = "<[^>]*>"
                        sRecord = oRegEx.Replace(sRecord, " ")
                        oRegEx.Pattern = "^\s+"
@@ -1595,7 +1749,6 @@ Function CollapseIPLCHoldings(sHoldings)
 End Function
 
 Function DecodeIPLCUnicode(sSource As String) As String
-    Set oRegEx = CreateObject("vbscript.regexp")
     oRegEx.Pattern = "\\u[0-9a-f]{4}"
     oRegEx.Global = True
     Set oMatch = oRegEx.Execute(sSource)
@@ -1608,7 +1761,6 @@ Function DecodeIPLCUnicode(sSource As String) As String
 End Function
 
 Function NormalizeISBN(sQuery As String) As String
-    Set oRegEx = CreateObject("vbscript.regexp")
     With oRegEx
         .MultiLine = False
         .Global = True
@@ -1731,7 +1883,6 @@ Function GenerateCheckDigit(sISXN As String) As String
 End Function
 
 Function NormalizeOCLC(sQuery As String) As String
-    Set oRegEx = CreateObject("vbscript.regexp")
     With oRegEx
        .MultiLine = False
         .Global = True
@@ -1750,7 +1901,6 @@ Function NormalizeOCLC(sQuery As String) As String
 End Function
 
 Function NormalizeISSN(sQuery As String) As String
-    Set oRegEx = CreateObject("vbscript.regexp")
     With oRegEx
         .MultiLine = False
         .Global = True
@@ -1770,7 +1920,6 @@ Function NormalizeISSN(sQuery As String) As String
 End Function
 
 Public Function HtmlDecode(StringToDecode As Variant) As String
-    Set oRegEx = CreateObject("vbscript.regexp")
     oRegEx.Global = True
     oRegEx.Pattern = "&[^; ]+;"
     Set oMatch = oRegEx.Execute(StringToDecode)
