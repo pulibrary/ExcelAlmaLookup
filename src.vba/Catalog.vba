@@ -207,7 +207,7 @@ Sub LookupInterface(control As IRibbonControl)
         
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
     sSourceRange = Selection.Address
-    LookupDialog.LookupRange.Value = sSourceRange
+    LookupDialog.LookupRange.Text = sSourceRange
     sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
     LookupDialog.SearchValueBox.Value = "[[" & sSourceColumn & "]]"
 
@@ -472,6 +472,8 @@ Sub PopulateSourceDependentOptions()
                 LookupDialog.SearchFieldCombo.AddItem "LCCN"
             Else
                 LookupDialog.SearchFieldCombo.AddItem "ISSN"
+                LookupDialog.SearchFieldCombo.AddItem "Z-Title-Date"
+                LookupDialog.SearchFieldCombo.AddItem "Z-Author-Title-Date"
             End If
             LookupDialog.SearchFieldCombo.AddItem "OCLC No."
                         
@@ -559,6 +561,10 @@ Sub PopulateOperatorCombo()
     Next i
     If bFound Then
         LookupDialog.OperatorCombo.Value = sDefaultValue
+    Else
+        MsgBox ("Search field not set to a valid index name")
+        LookupDialog.SearchFieldCombo.Value = "Keywords"
+        PopulateOperatorCombo
     End If
 End Sub
 
@@ -689,7 +695,7 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
         sIndex = GetAlmaSearchKey(sSearchType)
         aSearchTerms(0, 0) = ""
         aSearchTerms(0, 1) = sSearchType
-        aSearchTerms(0, 2) = "="
+        aSearchTerms(0, 2) = LookupDialog.OperatorCombo.Value
         If sSearchType = "alma.PermanentCallNumber" Then
             aSearchTerms(0, 2) = "all"
         End If
@@ -1007,14 +1013,44 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
     sQuery = Replace(sQuery, """", "\""")
     
     sCQLQuery = ""
-    aSearchKeys = Split(sQuery, "|")
-    For i = 0 To UBound(aSearchKeys)
-        If sCQLQuery <> "" Then
-            sCQLQuery = "@or " & sCQLQuery
+    If sSearchType = "Z-Author-Title-Date" Then
+        oRegEx.Pattern = "^AUTHOR *= *(.*) AND TITLE *= *(.*) AND YEAR *= *(.*)"
+        If oRegEx.Test(sQuery) Then
+            Set oFields = oRegEx.Execute(sQuery)
+            sAuthor = oFields(0).Submatches(0)
+            sAuthor = Replace(sAuthor, "*", "?")
+            sTitle = oFields(0).Submatches(1)
+            sTitle = Replace(sTitle, "*", "?")
+            sYear = oFields(0).Submatches(2)
+            sCQLQuery = "@and @attr 1=31 " & sYear & " @and " & _
+                "@attr 1=1 @attr 3=1 @attr 4=1 """ & sAuthor & """ " & _
+                "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
+        Else
+            sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
         End If
-        sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
-    Next i
-
+    ElseIf sSearchType = "Z-Title-Date" Then
+        oRegEx.Pattern = "^TITLE *= *(.*) AND YEAR *= *(.*)"
+        If oRegEx.Test(sQuery) Then
+            Set oFields = oRegEx.Execute(sQuery)
+            sTitle = oFields(0).Submatches(0)
+            sTitle = Replace(sTitle, "*", "?")
+            sYear = oFields(0).Submatches(1)
+            sCQLQuery = "@and @attr 1=31 " & sYear & " " & _
+                "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
+        Else
+            sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
+        End If
+    Else
+        aSearchKeys = Split(sQuery, "|")
+        For i = 0 To UBound(aSearchKeys)
+            If sCQLQuery <> "" Then
+                sCQLQuery = "@or " & sCQLQuery
+            End If
+            sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
+        Next i
+    End If
+    Debug.Print sCQLQuery
+    
     zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
     zcount = ZOOM_resultset_size(zrs)
