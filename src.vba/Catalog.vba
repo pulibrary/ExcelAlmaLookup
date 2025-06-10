@@ -538,6 +538,9 @@ Sub PopulateOperatorCombo()
     If IsEmpty(aExplainFields) Then
         aExplainFields = GetAllFields()
     End If
+    If IsNull(aExplainFields) Then
+        Exit Sub
+    End If
     If UBound(aExplainFields) = 0 Then
         LookupDialog.OperatorCombo.Enabled = False
         Exit Sub
@@ -768,7 +771,6 @@ NextTerm:
     If Not LookupDialog.IncludeSuppressed Then
         sURL = sURL & "+AND+alma.mms_tagSuppressed=false"
     End If
-    Debug.Print sURL
     ConstructURL = sURL
 End Function
 
@@ -1049,7 +1051,6 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
             sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
         Next i
     End If
-    Debug.Print sCQLQuery
     
     zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
@@ -1060,10 +1061,16 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
             zcount = iMaximumRecords
         End If
         For i = 0 To zcount - 1
-            zrec = ZOOM_resultset_record(zrs, i)
             Dim zptr As LongPtr
             Dim zsize As Long
+            zrec = ZOOM_resultset_record(zrs, i)
             zptr = ZOOM_record_get(zrec, "xml;charset=marc8,utf8", zsize)
+            If zsize = 0 Then
+                ZOOM_resultset_option_set zrs, "elementSetName", "F"
+                zrec = ZOOM_resultset_record(zrs, i)
+                zptr = ZOOM_record_get(zrec, "xml;charset=marc8,utf8", zsize)
+                ZOOM_resultset_option_set zrs, "elementSetName", "FA"
+            End If
             Dim recBytes() As Byte
             ReDim recBytes(zsize)
             CopyMemory recBytes(0), ByVal zptr, zsize
@@ -1088,7 +1095,7 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
         sAllRecords = sAllRecords & "</records></searchRetrieveResponse>"
     End If
     Z3950Search = sAllRecords
-    'ZOOM_resultset_destroy (zrs)
+    ZOOM_resultset_destroy (zrs)
 End Function
 
 Function GetColumnContents(ByVal oRow As Range, sValue As String) As String
@@ -1734,20 +1741,26 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
     If sResultType = "999$sp" Then
         ExtractField = CollapseIPLCHoldings(ExtractField)
     End If
-    If LookupDialog.CatalogURLBox.Value = "source:worldcat" And sResultTypeAll = "948$c#" Then
+    If LookupDialog.CatalogURLBox.Value = "source:worldcat" And sResultTypeAll = "948$ch#" Then
         sCodesDeDupe = ""
         iCodeCount = 0
-        aCodesA = Split(ExtractField, "|")
-        For i = 0 To UBound(aCodesA)
-            aCodesB = Split(aCodesA(i), ChrW(166))
-            For j = 0 To UBound(aCodesB)
-                If InStr(1, sCodesDeDupe, aCodesB(j)) = 0 Then
-                   sCodesDeDupe = sCodesDeDupe & aCodesB(j) & "|"
-                   iCodeCount = iCodeCount + 1
-                End If
-            Next j
-        Next i
-        ExtractField = CStr(iCodeCount)
+        oRegEx.Pattern = "[0-9]* OTHER HOLDINGS"
+        Set oMatch = oRegEx.Execute(ExtractField)
+        If oMatch.Count > 0 Then
+            ExtractField = CStr(CInt(Replace(oMatch(0), " OTHER HOLDINGS", "")) + 1)
+        Else
+            aCodesA = Split(ExtractField, "|")
+            For i = 0 To UBound(aCodesA)
+                aCodesB = Split(aCodesA(i), ChrW(166))
+                For j = 0 To UBound(aCodesB)
+                    If InStr(1, sCodesDeDupe, aCodesB(j)) = 0 Then
+                        sCodesDeDupe = sCodesDeDupe & aCodesB(j) & "|"
+                        iCodeCount = iCodeCount + 1
+                    End If
+                Next j
+            Next i
+            ExtractField = CStr(iCodeCount)
+        End If
     End If
 End Function
 

@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{16FF341D-0EE7-4F89-93FE-34E2A1FF4C5F}{256B067F-FB9F-4AC1-99BF-E53B71023325}"
+Attribute VB_Base = "0{E0152C48-2B24-4751-8905-042A48EFA79C}{742AD6C3-F2F6-41BA-9E8A-0D3ECCF2578E}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -319,9 +319,9 @@ Private Sub OKButton_Click()
                         ElseIf stype = "BorrowDirect Holdings" Then
                             stype = "999$sp"
                         ElseIf stype = "WorldCat Holdings" Then
-                            stype = "948$c"
+                            stype = "948$ch"
                         ElseIf LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "Holdings Count" Then
-                            stype = "948$c#"
+                            stype = "948$ch#"
                         End If
                         If sResultRec = "" Then
                             sResult = ""
