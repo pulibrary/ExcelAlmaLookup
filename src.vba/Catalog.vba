@@ -17,14 +17,14 @@ Global aAlmaSearchKeys As Variant
 Global sFileName As String
 Global sSheetName As String
 
+Public Const iMaximumRecords = 25
+
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sVersion = "v1.4.0"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
 Public Const sIPLCReshareURL = "https://borrowdirect.reshare.indexdata.com/api/v1/search?type=AllFields&field%5B%5D=fullRecord&lookfor="
-
-Public Const iMaximumRecords = 25
 
 Public Const sWCZhost = "zcat.oclc.org"
 Public Const sWCZport = 210
