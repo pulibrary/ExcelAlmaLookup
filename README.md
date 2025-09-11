@@ -131,3 +131,30 @@ When the user clicks the "OK" button, they will be prompted to enter their World
 <img src='./img/example5.jpg'>
 
 Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so that only the number is searched in WorldCat.
+
+### Beta version (v1.4.0) with multi-index searching
+
+A new version of the tool is in development! The main feature being added is multi-index searching for Alma queries.  For example, one can perform a search for Title + Author + Publication Date, where these data elements are found in separate columns of the spreadsheet.   If you are interested in trying out this feature, you can download the beta installer at the link below.  Please report any issues or questions about the beta version using the "Issues" or "Discussion" tabs at the top of this page.
+
+https://github.com/pulibrary/ExcelAlmaLookup/releases/download/v1.4.0-beta/CatalogLookupInstaller.exe
+
+The beta version may be launched in the same way as the current version - by selecting a column or range of cells, and clicking the "Look Up in Catalog" button.  However, in the main dialog, the "Search" section looks slightly different.
+
+<img src='./img/beta1.jpg'>
+
+To search a single index, just select the appropriate value in the "Field Name" menu. The column to search is shown in double brackets in the "Value" field, but this should auto-populate based on what was highlighted before launching the plugin.
+
+To do a multi-index search, set the "Field Name" as desired and click the "Add" button to add the search parameter to the list.  Repeat for each search index (manually changing the column letter in the "Value" field as appropriate).  In the example below, a search will be peformed for each row with the title equal to column H, the author equal to column B, and the publication date equal to column F.
+
+<img src='./img/beta2.jpg'>
+
+Note that the "Field Name" drop-down only has a few different values, but one can access the full list of possible values by selecting "Other fields...".  (This is the list that could previously be accessed with the "Additional Fields..." button.) It is also possible to type the Alma index name (e.g. "alma.date_of_publication") directly in the "Field Name" box.
+
+(The "Relation" menu also may offer a few options for types of comparisons.  Note that "=" is a phrase search within the field, whereas "==" is an exact match of the entire field.  Numeric fields like dates also offer "<" (greater than), ">" (less than), etc.  Also, after adding the first search field, the leftmost menu will give the option of AND or OR for joining the search conditions.  OR could be used, for example, to search for either a title OR a uniform title.)
+
+Note too that the "Value" field can be either a column name (enclosed in double brackets) or a fixed value.  The example below shows how to search for all records where the title matches column H and the material type is MU (music).
+
+<img src='./img/beta3.jpg'>
+
+The bottom part of the dialog (result types and field sets) functions in the same way as the previous version of the plugin.  See the main documentation above for details. 
+
