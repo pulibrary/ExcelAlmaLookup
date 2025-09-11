@@ -152,7 +152,7 @@ Note that the "Field Name" drop-down only has a few different values, but one ca
 
 (The "Relation" menu also may offer a few options for types of comparisons.  Note that "=" is a phrase search within the field, whereas "==" is an exact match of the entire field.  Numeric fields like dates also offer "<" (greater than), ">" (less than), etc.  Also, after adding the first search field, the leftmost menu will give the option of AND or OR for joining the search conditions.  OR could be used, for example, to search for either a title OR a uniform title.)
 
-Note too that the "Value" field can be either a column name (enclosed in double brackets) or a fixed value.  The example below shows how to search for all records where the title matches column H and the material type is MU (music).
+Note too that the "Value" field can be either a column letter (enclosed in double brackets) or a fixed value.  The example below shows how to search for all records where the title matches column H and the material type is MU (music).
 
 <img src='./img/beta3.jpg'>
 
