@@ -19,7 +19,7 @@ Simply run the installer (and be sure to quit Excel before doing so).  After the
 
 <img src='./img/ribbon.jpg'>
 
-The plugin will only be installed under the current user's profile.  While it is not possible to automatically to install the plugin for all users on a computer, you can specify a custom installation directory.  If this directory is accessible to other users on the computer, then they can enable the plugin without having to download and install it themselves.  To do so:
+The plugin will only be installed under the current user's profile.  While it is not possible to automatically install the plugin for all users on a computer, you can specify a custom installation directory.  If this directory is accessible to other users on the computer, then they can enable the plugin without having to download and install it themselves.  To do so:
 
 1. In Excel, go to the "File" tab, and click "Options" in the left sidebar.
 2. In the options window, click "Add-ins" in the left sidebar. 
