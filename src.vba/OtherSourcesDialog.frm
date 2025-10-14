@@ -1,5 +1,5 @@
 Attribute VB_Name = "OtherSourcesDialog"
-Attribute VB_Base = "0{B449A1BC-CF70-44FD-8EF2-C2BE034CE039}{23D90E8F-68A2-4352-BC1A-ACD4B222BC23}"
+Attribute VB_Base = "0{F3BB48B4-B517-4B67-9A98-3C2C0DDC0383}{09A56E2A-4B28-4731-8349-D2ECA4A3A8DB}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True

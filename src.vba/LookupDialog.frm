@@ -1,20 +1,11 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{D6A022EC-BFDA-4474-9F40-3431BCCF1F1D}{14AC1774-C83E-4561-B9D2-0EDF2B137FC9}"
+Attribute VB_Base = "0{34D0E47B-6AE5-4DF9-BD1A-699574E9A6D0}{19CCE4A7-39D7-4B77-8638-5CA33F9DF0E3}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = False
-Private Sub AdditionalFieldsButton_Click()
-    Catalog.aExplainFields = Catalog.GetAllFields()
-    AdditionalFieldsDialog.FilterBox.Value = ""
-    If Not IsNull(aExplainFields) Then
-        AdditionalFieldsDialog.SRUFields.List = aExplainFields
-        AdditionalFieldsDialog.Show
-    End If
-End Sub
-
 Private Sub AddResultButton_Click()
     With LookupDialog
         If ResultTypeCombo.Value <> "" Then
@@ -38,6 +29,9 @@ Private Sub AddSearchButton_Click()
     SearchListBox.List(iIndex, 2) = OperatorCombo.Value
     SearchListBox.List(iIndex, 3) = SearchValueBox.Value
     LookupDialog.BooleanCombo.Enabled = True
+    LookupDialog.BooleanCombo.Clear
+    LookupDialog.BooleanCombo.AddItem "AND"
+    LookupDialog.BooleanCombo.AddItem "OR"
     LookupDialog.BooleanCombo.ListIndex = 0
 End Sub
 
@@ -50,6 +44,7 @@ Private Sub AddURLButton_Click()
     Else
         Catalog.AddURLtoRegistry CatalogURLBox.Value
     End If
+    Catalog.PopulateCombos
 End Sub
 
 Private Sub CancelButton_Click()
@@ -64,8 +59,12 @@ Private Sub CatalogURLBox_Change()
         sAuth = GetSetting(Catalog.sRegistryDir, "Sources", "AUTH" & Format(iSelected, "000"), "")
         SaveSetting Catalog.sRegistryDir, "Sources", "SELECTED", CatalogURLBox.Value
         Catalog.bIsAlma = True
+        Catalog.bIsWorldCat = False
         If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
             Catalog.bIsAlma = False
+            If LookupDialog.CatalogURLBox = "source:worldcat" Then
+                Catalog.bIsWorldCat = True
+            End If
         End If
         Catalog.PopulateSourceDependentOptions
     End If
@@ -84,7 +83,6 @@ Private Sub DeleteSetButton_Click()
     End If
     
     sSelectedSet = LookupDialog.FieldSetList.List(iSetIndex)
-    Debug.Print "*" & sSelectedSet & "*"
     Catalog.DeleteFieldSet sSelectedSet
     LookupDialog.FieldSetList.RemoveItem iSetIndex
     LookupDialog.FieldSetList.ListIndex = -1
@@ -206,12 +204,13 @@ Private Sub OKButton_Click()
     End If
     Dim sCatalogURL As String
     sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
-    If sCatalogURL = "source:worldcat" Then
+    If Catalog.bIsWorldCat Then
         bSuccess = Catalog.Z3950Connect(sCatalogURL)
         If Not bSuccess Then
             Exit Sub
         End If
     End If
+    
     Catalog.AddURLtoRegistry (sCatalogURL)
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
@@ -287,7 +286,7 @@ Private Sub OKButton_Click()
                             GoTo NextRow
                         End If
                         If stype = "MMS ID" Or stype = "Catalog ID" Or _
-                            (LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "OCLC No.") Then
+                            (Catalog.bIsWorldCat And stype = "OCLC No.") Then
                             stype = "001"
                         ElseIf stype = "LCCN" Then
                             stype = "010"
@@ -320,13 +319,15 @@ Private Sub OKButton_Click()
                             stype = "999$sp"
                         ElseIf stype = "WorldCat Holdings" Then
                             stype = "948$ch"
-                        ElseIf LookupDialog.CatalogURLBox.Value = "source:worldcat" And stype = "Holdings Count" Then
+                        ElseIf Catalog.bIsWorldCat And stype = "Holdings Count" Then
                             stype = "948$ch#"
                         End If
                         If sResultRec = "" Then
                             sResult = ""
                         ElseIf sResultRec = "INVALID" Then
                             sResult = "INVALID"
+                        ElseIf sResultRec = "TOO MANY HOLDINGS" Then
+                            sResult = "TOO MANY HOLDINGS"
                         Else
                             If stype = "Barcode" Then
                                 sResult = ExtractField(stype, CStr(sResultHold), True)
@@ -359,6 +360,11 @@ Private Sub OKButton_Click()
 NextRow:
                         oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
                         oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = sResult
+                    Next j
+                Else
+                    For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = "FALSE"
                     Next j
                 End If
                 If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then
@@ -414,15 +420,20 @@ Private Sub RemoveResultButton_Click()
 End Sub
 
 Private Sub RemoveSearchButton_Click()
-    iSelected = LookupDialog.SearchListBox.ListIndex
-    If iSelected > -1 Then
-        LookupDialog.SearchListBox.RemoveItem (iSelected)
-    End If
-    If LookupDialog.SearchListBox.ListIndex = -1 Then
-        LookupDialog.RemoveSearchButton.Enabled = False
-        LookupDialog.BooleanCombo.Enabled = False
-        LookupDialog.BooleanCombo.Value = ""
-    End If
+    With LookupDialog.SearchListBox
+        iSelected = .ListIndex
+        If iSelected > -1 Then
+            .RemoveItem (iSelected)
+        End If
+        If .ListIndex = -1 Then
+            LookupDialog.RemoveSearchButton.Enabled = False
+            LookupDialog.BooleanCombo.Enabled = False
+            LookupDialog.BooleanCombo.Value = ""
+        End If
+        If .ListCount > 0 Then
+            .List(0, 0) = ""
+        End If
+    End With
 End Sub
 
 Private Sub RemoveURLButton_Click()
@@ -469,10 +480,20 @@ Private Sub SearchFieldCombo_Change()
     sField = LookupDialog.SearchFieldCombo.Value
     If sField = "Other fields..." Then
         AdditionalFieldsDialog.FilterBox.Value = ""
-        If Not IsNull(aExplainFields) Then
-            AdditionalFieldsDialog.SRUFields.List = aExplainFields
-            AdditionalFieldsDialog.Show
+        If Catalog.bIsAlma Then
+            If IsNull(Catalog.aExplainFields) Then
+                Catalog.aExplainFields = Catalog.GetAllFields()
+            End If
+            If Not IsNull(aExplainFields) Then
+                AdditionalFieldsDialog.SRUFields.List = Catalog.aExplainFields
+            Else
+                MsgBox ("Cannot access catalog.  Please confirm the Alma URL is correct.")
+                Exit Sub
+            End If
+        ElseIf Catalog.bIsWorldCat Then
+            AdditionalFieldsDialog.SRUFields.List = Catalog.aOCLCSearchKeys
         End If
+        AdditionalFieldsDialog.Show
     End If
 End Sub
 
@@ -481,17 +502,28 @@ Private Sub SearchFieldCombo_AfterUpdate()
 End Sub
 
 Private Sub SearchListBox_Click()
-    If LookupDialog.SearchListBox.ListIndex > -1 Then
-        LookupDialog.RemoveSearchButton.Enabled = True
-    Else
-        LookupDialog.RemoveSearchButton.Enabled = False
+    If LookupDialog.SearchListBox.Enabled Then
+        If LookupDialog.SearchListBox.ListIndex > -1 Then
+            LookupDialog.RemoveSearchButton.Enabled = True
+        Else
+            LookupDialog.RemoveSearchButton.Enabled = False
+        End If
     End If
 End Sub
 
+
 Private Sub SearchValueBox_Change()
-    If LookupDialog.SearchValueBox.Value <> "" Then
-        LookupDialog.AddSearchButton.Enabled = True
-    Else
-        LookupDialog.AddSearchButton.Enabled = False
+    If LookupDialog.SearchListBox.Enabled Then
+        If LookupDialog.SearchValueBox.Value <> "" Then
+            LookupDialog.AddSearchButton.Enabled = True
+        Else
+            LookupDialog.AddSearchButton.Enabled = False
+        End If
+    End If
+End Sub
+
+Private Sub UserForm_Activate()
+    If InStr(1, LookupDialog.CatalogURLBox.Value, "http") = 1 Then
+        Catalog.aExplainFields = Catalog.GetAllFields()
     End If
 End Sub

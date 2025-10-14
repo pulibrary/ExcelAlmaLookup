@@ -1,5 +1,5 @@
 Attribute VB_Name = "AdditionalFieldsDialog"
-Attribute VB_Base = "0{B6A816AB-14B5-4CB0-95D4-D00D2397400E}{978E9276-0B5E-4A20-B521-8E9D7E37E4A0}"
+Attribute VB_Base = "0{3EF0963D-E253-4221-9A27-1D75334CE90D}{D8E30B44-27EA-4D0F-8B53-7D1C6177EA44}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -12,7 +12,11 @@ Private Sub PopulateSearchField()
         MsgBox ("No field is selected")
     Else
         With LookupDialog.SearchFieldCombo
-            .AddItem AdditionalFieldsDialog.SRUFields.List(i, 1), .ListCount - 1
+            If Catalog.bIsAlma Then
+                .AddItem AdditionalFieldsDialog.SRUFields.List(i, 1), .ListCount - 1
+            ElseIf LookupDialog.CatalogURLBox = "source:worldcat" Then
+                .AddItem AdditionalFieldsDialog.SRUFields.List(i, 0), .ListCount - 1
+            End If
             .ListIndex = .ListCount - 2
         End With
     End If
@@ -26,16 +30,23 @@ End Sub
 Private Sub FilterBox_Change()
     sFilterText = LCase(AdditionalFieldsDialog.FilterBox.Value)
     AdditionalFieldsDialog.SRUFields.Clear
+    Dim aIndexFields As Variant
+    
+    If Catalog.bIsAlma Then
+        aIndexFields = Catalog.aExplainFields
+    ElseIf Catalog.bIsWorldCat Then
+        aIndexFields = Catalog.aOCLCSearchKeys
+    End If
     If sFilterText = "" Then
-        AdditionalFieldsDialog.SRUFields.List = Catalog.aExplainFields
+        AdditionalFieldsDialog.SRUFields.List = aIndexFields
         Exit Sub
     End If
     iFilterCount = 0
-    For i = 0 To UBound(Catalog.aExplainFields)
-        If InStr(1, LCase(aExplainFields(i, 0) & "|" & aExplainFields(i, 1)), sFilterText) > 0 Then
+    For i = 0 To UBound(aIndexFields)
+        If InStr(1, LCase(aIndexFields(i, 0) & "|" & aIndexFields(i, 1)), sFilterText) > 0 Then
             AdditionalFieldsDialog.SRUFields.AddItem
-            AdditionalFieldsDialog.SRUFields.List(iFilterCount, 0) = aExplainFields(i, 0)
-            AdditionalFieldsDialog.SRUFields.List(iFilterCount, 1) = aExplainFields(i, 1)
+            AdditionalFieldsDialog.SRUFields.List(iFilterCount, 0) = aIndexFields(i, 0)
+            AdditionalFieldsDialog.SRUFields.List(iFilterCount, 1) = aIndexFields(i, 1)
             iFilterCount = iFilterCount + 1
         End If
     Next i

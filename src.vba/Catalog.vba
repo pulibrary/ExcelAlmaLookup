@@ -10,14 +10,18 @@ Global bTerminateLoop As Boolean
 Global bKeepTryingURL As Boolean
 Global bIsoholdEnabled  As Boolean
 Global bIsAlma As Boolean
+Global bIsWorldCat As Boolean
 Global sCatalogURL As String
 Global sAuth As String
 Global aAlmaSearchKeys As Variant
+Global aOCLCSearchKeys As Variant
+Global aOtherSources As Variant
 
 Global sFileName As String
 Global sSheetName As String
 
-Public Const iMaximumRecords = 25
+Public Const iMaximumRecords = 50
+Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
 Public Const sVersion = "v1.4.0"
@@ -163,22 +167,62 @@ Function GetLatestVersionNumber()
     With oXMLHTTP
         .Open "GET", sAPIUrl, True
         .Send
-        Do While .readyState <> 4
-            DoEvents
-        Loop
         GetLatestVersionNumber = sVersion
-        If .Status = 200 Then
-            iTagStart = InStr(1, .responseText, sTagLabel)
-            iTagStart = iTagStart + Len(sTagLabel & """:""")
-            If iTagStart > 0 Then
-                iTagEnd = InStr(iTagStart, .responseText, """")
-                If iTagEnd > 0 Then
-                    GetLatestVersionNumber = Mid(.responseText, iTagStart, iTagEnd - iTagStart)
+        On Error Resume Next
+        bSuccess = .waitForResponse(iTimeoutSecs)
+        If bSuccess Then
+            If .Status = 200 Then
+                iTagStart = InStr(1, .responseText, sTagLabel)
+                iTagStart = iTagStart + Len(sTagLabel & """:""")
+                If iTagStart > 0 Then
+                    iTagEnd = InStr(iTagStart, .responseText, """")
+                    If iTagEnd > 0 Then
+                        GetLatestVersionNumber = Mid(.responseText, iTagStart, iTagEnd - iTagStart)
+                    End If
                 End If
             End If
         End If
     End With
 End Function
+
+Sub PopulateIndexLists()
+    Dim oOtherSources As Range
+    Set oOtherSources = ThisWorkbook.Worksheets("OtherSources").Range("A:B")
+    With oOtherSources
+        iLastRow = .Range("A999999").End(xlUp).Row
+        ReDim aOtherSources(iLastRow - 1, 2) As Variant
+        For i = 2 To iLastRow
+            aOtherSources(i - 2, 0) = oOtherSources(i, 1)
+            aOtherSources(i - 2, 1) = oOtherSources(i, 2)
+        Next i
+    End With
+
+    Dim oAlmaIndexes As Range
+    Set oAlmaIndexes = ThisWorkbook.Worksheets("AlmaSRU").Range("A:B")
+    With oAlmaIndexes
+        iLastRow = .Range("A999999").End(xlUp).Row
+        ReDim aAlmaSearchKeys(iLastRow - 1, 2) As Variant
+        For i = 2 To iLastRow
+            aAlmaSearchKeys(i - 2, 0) = oAlmaIndexes(i, 1)
+            aAlmaSearchKeys(i - 2, 1) = oAlmaIndexes(i, 2)
+        Next i
+    End With
+    
+    Dim oOCLCIndexes As Range
+    Set oOCLCIndexes = ThisWorkbook.Worksheets("WorldCatZ3950").Range("A:C")
+    With oOCLCIndexes
+        iLastRow = .Range("A999999").End(xlUp).Row
+        ReDim aOCLCSearchKeys(iLastRow - 1, 2) As Variant
+        For i = 2 To iLastRow
+            aOCLCSearchKeys(i - 2, 0) = oOCLCIndexes(i, 1)
+            aOCLCSearchKeys(i - 2, 1) = oOCLCIndexes(i, 2)
+            aOCLCSearchKeys(i - 2, 2) = oOCLCIndexes(i, 3)
+            
+        Next i
+    End With
+    
+End Sub
+
 
 'Main function called when toolbar button is pressed.  Sets up dialog box.
 Sub LookupInterface(control As IRibbonControl)
@@ -199,8 +243,9 @@ Sub LookupInterface(control As IRibbonControl)
         Initialize
     End If
     
-    PopulateCombos
+    PopulateIndexLists
     RedrawButtons
+    PopulateCombos
     
     sFileName = ActiveWorkbook.Name
     sSheetName = ActiveSheet.Name
@@ -393,19 +438,6 @@ Sub PopulateCombos()
         End If
     Next i
 
-    LookupDialog.BooleanCombo.AddItem "AND"
-    LookupDialog.BooleanCombo.AddItem "OR"
-    
-    Dim aOtherSources(4, 2) As Variant
-    aOtherSources(0, 0) = "source:recap"
-    aOtherSources(0, 1) = "ReCAP"
-    aOtherSources(1, 0) = "source:borrowdirect"
-    aOtherSources(1, 1) = "BorrowDirect (IPLC ReShare)"
-    aOtherSources(2, 0) = "source:lccat"
-    aOtherSources(2, 1) = "Library of Congress"
-    aOtherSources(3, 0) = "source:worldcat"
-    aOtherSources(3, 1) = "WorldCat"
-
     OtherSourcesDialog.OtherSourcesListBox.List = aOtherSources
 
     PopulateSourceDependentOptions
@@ -415,15 +447,15 @@ End Sub
 Sub PopulateSourceDependentOptions()
     LookupDialog.ResultTypeCombo.Clear
     LookupDialog.ResultTypeCombo.AddItem "True/False"
-    If Catalog.bIsAlma Then
+    If bIsAlma Then
         LookupDialog.ResultTypeCombo.AddItem "MMS ID"
-    ElseIf LookupDialog.CatalogURLBox = "source:worldcat" Then
+    ElseIf bIsWorldCat Then
         LookupDialog.ResultTypeCombo.AddItem "OCLC No."
     Else
         LookupDialog.ResultTypeCombo.AddItem "Catalog ID"
     End If
     LookupDialog.ResultTypeCombo.AddItem "ISBN"
-    If Not LookupDialog.CatalogURLBox = "source:worldcat" Then
+    If Not bIsWorldCat Then
         LookupDialog.ResultTypeCombo.AddItem "OCLC No."
     End If
     LookupDialog.ResultTypeCombo.AddItem "Title"
@@ -454,29 +486,63 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.ResultTypeCombo.AddItem "BorrowDirect Holdings"
     End If
     
-    If LookupDialog.CatalogURLBox = "source:worldcat" Then
+    If bIsWorldCat Then
         LookupDialog.ResultTypeCombo.AddItem "WorldCat Holdings"
         LookupDialog.ResultTypeCombo.AddItem "Holdings Count"
     End If
     
     LookupDialog.SearchFieldCombo.Clear
+    LookupDialog.BooleanCombo.Clear
+    LookupDialog.BooleanCombo.Enabled = False
         
-    If Not bIsAlma Then
+    If bIsAlma Then
+        LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
+        LookupDialog.SearchFieldCombo.Clear
+        LookupDialog.SearchFieldCombo.Enabled = True
+        For i = 0 To UBound(aAlmaSearchKeys) - 1
+            LookupDialog.SearchFieldCombo.AddItem aAlmaSearchKeys(i, 0)
+        Next i
+        LookupDialog.SearchFieldCombo.AddItem "Other fields..."
+        LookupDialog.SearchFieldCombo.ListIndex = 0
+        
+        LookupDialog.OperatorCombo.Enabled = True
+        LookupDialog.SearchValueBox.Enabled = True
+        LookupDialog.SearchListBox.Clear
+        LookupDialog.SearchListBox.Enabled = True
+        LookupDialog.AddSearchButton.Enabled = True
+        PopulateOperatorCombo
+    ElseIf bIsWorldCat Then
+        LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
+        LookupDialog.SearchFieldCombo.Clear
+        LookupDialog.SearchFieldCombo.Enabled = True
+        
+        For i = 0 To UBound(aOCLCSearchKeys) - 1
+            If aOCLCSearchKeys(i, 2) = "X" Then
+                LookupDialog.SearchFieldCombo.AddItem aOCLCSearchKeys(i, 0)
+            End If
+        Next i
+        LookupDialog.SearchFieldCombo.AddItem "Holdings Code(s)"
+        LookupDialog.SearchFieldCombo.AddItem "Other fields..."
+        LookupDialog.SearchFieldCombo.ListIndex = 0
+        
+        LookupDialog.OperatorCombo.Enabled = False
+        LookupDialog.SearchValueBox.Enabled = True
+        LookupDialog.SearchListBox.Clear
+        LookupDialog.SearchListBox.Enabled = True
+        LookupDialog.AddSearchButton.Enabled = True
+        PopulateOperatorCombo
+    Else 'Other non-Alma sources
         LookupDialog.SearchFieldCombo.Style = 2 'fmStyleDropDownList
+        LookupDialog.SearchFieldCombo.Clear
         LookupDialog.SearchFieldCombo.AddItem "Keywords"
-        If LookupDialog.CatalogURLBox = "source:worldcat" Or LookupDialog.CatalogURLBox = "source:recap" Then
+        If LookupDialog.CatalogURLBox = "source:recap" Then
             LookupDialog.SearchFieldCombo.Enabled = True
             LookupDialog.SearchFieldCombo.AddItem "Title"
             LookupDialog.SearchFieldCombo.AddItem "ISBN"
             If LookupDialog.CatalogURLBox = "source:recap" Then
                 LookupDialog.SearchFieldCombo.AddItem "LCCN"
-            Else
-                LookupDialog.SearchFieldCombo.AddItem "ISSN"
-                LookupDialog.SearchFieldCombo.AddItem "Z-Title-Date"
-                LookupDialog.SearchFieldCombo.AddItem "Z-Author-Title-Date"
             End If
             LookupDialog.SearchFieldCombo.AddItem "OCLC No."
-                        
         Else
             LookupDialog.SearchFieldCombo.Enabled = False
         End If
@@ -487,40 +553,12 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.SearchValueBox.Enabled = False
         LookupDialog.SearchListBox.Clear
         LookupDialog.SearchListBox.Enabled = False
+        LookupDialog.AddSearchButton.Enabled = False
+        LookupDialog.RemoveSearchButton.Enabled = False
         sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
         LookupDialog.SearchValueBox.Value = "[[" & sSourceColumn & "]]"
-    Else
-        LookupDialog.SearchFieldCombo.Style = 0 'fmStyleDropDownCombo
-        LookupDialog.SearchFieldCombo.Clear
-        LookupDialog.SearchFieldCombo.Enabled = True
-        ReDim aAlmaSearchKeys(7, 2) As Variant
-        aAlmaSearchKeys(0, 0) = "Keywords"
-        aAlmaSearchKeys(0, 1) = "alma.all_for_ui"
-        aAlmaSearchKeys(1, 0) = "Call No."
-        aAlmaSearchKeys(1, 1) = "alma.PermanentCallNumber"
-        aAlmaSearchKeys(2, 0) = "Title"
-        aAlmaSearchKeys(2, 1) = "alma.title"
-        aAlmaSearchKeys(3, 0) = "ISBN"
-        aAlmaSearchKeys(3, 1) = "alma.isbn"
-        aAlmaSearchKeys(4, 0) = "ISSN"
-        aAlmaSearchKeys(4, 1) = "alma.issn"
-        aAlmaSearchKeys(5, 0) = "MMS ID"
-        aAlmaSearchKeys(5, 1) = "rec.id"
-        aAlmaSearchKeys(6, 0) = "Barcode"
-        aAlmaSearchKeys(6, 1) = "alma.barcode"
-        For i = 0 To UBound(aAlmaSearchKeys) - 1
-            LookupDialog.SearchFieldCombo.AddItem aAlmaSearchKeys(i, 0)
-        Next i
-        LookupDialog.SearchFieldCombo.AddItem "Other fields..."
-        LookupDialog.SearchFieldCombo.ListIndex = 0
-        
-        LookupDialog.BooleanCombo.Enabled = True
-        LookupDialog.OperatorCombo.Enabled = True
-        LookupDialog.SearchValueBox.Enabled = True
-        LookupDialog.SearchListBox.Enabled = True
-        
-        PopulateOperatorCombo
     End If
+    
     If LookupDialog.SearchFieldCombo.ListCount > 0 Then
         LookupDialog.SearchFieldCombo.ListIndex = 0
     End If
@@ -529,6 +567,12 @@ Sub PopulateSourceDependentOptions()
 End Sub
 
 Sub PopulateOperatorCombo()
+    If bIsWorldCat Then
+        LookupDialog.OperatorCombo.Clear
+        LookupDialog.OperatorCombo.AddItem "="
+        LookupDialog.OperatorCombo.Value = "="
+        Exit Sub
+    End If
     If Not bIsAlma Then
         Exit Sub
     End If
@@ -536,6 +580,13 @@ Sub PopulateOperatorCombo()
     sKey = GetAlmaSearchKey(LookupDialog.SearchFieldCombo.Value)
     bFound = False
     If IsEmpty(aExplainFields) Then
+        If LookupDialog.SearchFieldCombo.Value = "Keywords" Then
+            LookupDialog.OperatorCombo.AddItem "all"
+            LookupDialog.OperatorCombo.AddItem "="
+            LookupDialog.OperatorCombo.AddItem "empty"
+            LookupDialog.OperatorCombo.Value = "="
+            Exit Sub
+        End If
         aExplainFields = GetAllFields()
     End If
     If IsNull(aExplainFields) Then
@@ -579,6 +630,16 @@ Function GetAlmaSearchKey(sPhrase As String) As String
         End If
     Next i
     GetAlmaSearchKey = sKey
+End Function
+
+Function GetOCLCSearchKey(sPhrase As String) As String
+    sKey = sPhrase
+    For i = 0 To UBound(aOCLCSearchKeys)
+        If sPhrase = aOCLCSearchKeys(i, 0) Then
+            sKey = aOCLCSearchKeys(i, 1)
+        End If
+    Next i
+    GetOCLCSearchKey = sKey
 End Function
 
 Sub RedrawButtons()
@@ -797,7 +858,7 @@ Function DecodeAuth() As String
     End If
 End Function
 
-Function GetAllFields()
+Function GetAllFields() As Variant
     If oXMLHTTP Is Nothing Then
         Initialize
     End If
@@ -814,7 +875,7 @@ Function GetAllFields()
         While bKeepTryingURL
             bInvalidURL = False
             sExplainURL = sCatalogURL & "?version=1.2&operation=explain"
-            With oXMLHTTP
+              With oXMLHTTP
                 .Open "GET", sExplainURL, True
                 .setRequestHeader "Cache-Control", "no-cache,max-age=0"
                 .setRequestHeader "pragma", "no-cache"
@@ -822,29 +883,31 @@ Function GetAllFields()
                     .setRequestHeader "Authorization", "Basic " + sAuth
                 End If
                 .Send
-                
-                Do While .readyState <> 4
-                    DoEvents
-                Loop
-
-                sResponse = .responseText
-                bKeepTryingURL = False
-                If .Status <> 200 Or InStr(sResponse, "explainResponse") = 0 Then
-                    bInvalidURL = True
-                End If
-                If .Status = 401 Then
-                    bNeedsAuthentication = True
-                    bKeepTryingURL = True
-                    bInvalidURL = True
-                    UserPassForm.UserNameBox.Value = ""
-                    UserPassForm.PasswordBox.Value = ""
-                    UserPassForm.Show
-                    If bKeepTryingURL Then
-                        sAuth = GenerateAuth(UserPassForm.UserNameBox.Value, UserPassForm.PasswordBox.Value)
+                On Error Resume Next
+                bSuccess = .waitForResponse(iTimeoutSecs)
+                If bSuccess Then
+                    sResponse = .responseText
+                    bKeepTryingURL = False
+                    If .Status <> 200 Or InStr(sResponse, "explainResponse") = 0 Then
+                        bInvalidURL = True
                     End If
-                End If
-                If .Status = 200 And sAuth <> "" And UserPassForm.RememberCheckbox.Value Then
-                    SaveCatalogAuthToRegistry
+                    If .Status = 401 Then
+                        bNeedsAuthentication = True
+                        bKeepTryingURL = True
+                        bInvalidURL = True
+                        UserPassForm.UserNameBox.Value = ""
+                        UserPassForm.PasswordBox.Value = ""
+                        UserPassForm.Show
+                        If bKeepTryingURL Then
+                            sAuth = GenerateAuth(UserPassForm.UserNameBox.Value, UserPassForm.PasswordBox.Value)
+                        End If
+                    End If
+                    If .Status = 200 And sAuth <> "" And UserPassForm.RememberCheckbox.Value Then
+                        SaveCatalogAuthToRegistry
+                    End If
+                Else
+                    bKeepTryingURL = False
+                    bInvalidURL = True
                 End If
             End With
         Wend
@@ -866,14 +929,13 @@ Function GetAllFields()
             .setRequestHeader "Authorization", "Basic " + sAuth
         End If
         .Send
-                
-        Do While .readyState <> 4
-            DoEvents
-        Loop
-        If .Status = 200 Then
-            bIsoholdEnabled = True
+        On Error Resume Next
+        bSuccess = .waitForResponse(iTimeoutSecs)
+        If bSuccess Then
+            If .Status = 200 Then
+                bIsoholdEnabled = True
+            End If
         End If
-        
     End With
     
     
@@ -930,7 +992,7 @@ Function Z3950Connect(sSource As String) As Boolean
     sZDB = ""
     sZUserName = ""
     sZPassword = ""
-    If sSource = "source:worldcat" Then
+    If bIsWorldCat Then
         sZHost = sWCZhost
         sZPort = 210
         sZDB = sWCZDB
@@ -946,6 +1008,7 @@ Function Z3950Connect(sSource As String) As Boolean
     bValidConnection = False
     While bKeepTryingURL And Not bValidConnection
         oZConn = ZOOM_connection_create(0)
+        ZOOM_connection_option_set oZConn, "charset", "UTF-8"
         ZOOM_connection_option_set oZConn, "databaseName", sZDB
         ZOOM_connection_option_set oZConn, "preferredRecordSyntax", "USmarc"
         ZOOM_connection_option_set oZConn, "elementSetName", "FA"
@@ -979,7 +1042,8 @@ Function Z3950Connect(sSource As String) As Boolean
     Z3950Connect = True
 End Function
 
-Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
+
+Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String, bAdvancedSearch As Boolean, oQueryRow As Range) As String
     If oZConn = 0 Then
         bSuccess = Z3950Connect(sSource)
         If Not bSuccess Then
@@ -988,73 +1052,180 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
         End If
     End If
     
-    oConverter.Open
-    oConverter.Charset = "UTF-8"
-    oConverter.Type = 2
-    oConverter.WriteText sQuery
-    oConverter.Position = 0
-    oConverter.Charset = "ISO-8859-1"
-    sQuery = oConverter.ReadText
-    sQuery = Replace(sQuery, ChrW(239) & ChrW(187) & ChrW(191), "") 'BOM
-    oConverter.Close
-    
-    sSearchIndex = "1016"
-    If sSearchType = "Title" Then
-        sSearchIndex = "4"
-    ElseIf sSearchType = "ISBN" Then
-        sSearchIndex = "7"
-        sQuery = NormalizeISBN(sQuery)
-    ElseIf sSearchType = "ISSN" Then
-        sSearchIndex = "8"
-        sQuery = NormalizeISSN(sQuery)
-    ElseIf sSearchType = "OCLC No." Then
-        sSearchIndex = "12"
-        sQuery = NormalizeOCLC(sQuery)
+    iSearchTermsCount = 1
+    If bAdvancedSearch Then
+        iSearchTermsCount = LookupDialog.SearchListBox.ListCount
     End If
     
-    sQuery = Replace(sQuery, """", "\""")
+    Dim aSearchTerms() As Variant
+    ReDim aSearchTerms(iSearchTermsCount, 4)
+    
+    Dim sSearchIndex As String
+              
+    If Not bAdvancedSearch Then
+        aSearchTerms(0, 0) = ""
+        aSearchTerms(0, 1) = sSearchType
+        aSearchTerms(0, 2) = LookupDialog.OperatorCombo.Value
+        aSearchTerms(0, 3) = sQuery1
+    Else
+        With LookupDialog.SearchListBox
+            For i = 0 To iSearchTermsCount - 1
+              If i > 0 Then
+                aSearchTerms(i, 0) = .List(i, 0)
+              Else
+                aSearchTerms(i, 0) = ""
+              End If
+              aSearchTerms(i, 1) = .List(i, 1)
+              aSearchTerms(i, 2) = .List(i, 2)
+              aSearchTerms(i, 3) = .List(i, 3)
+            Next i
+        End With
+    End If
     
     sCQLQuery = ""
-    If sSearchType = "Z-Author-Title-Date" Then
-        oRegEx.Pattern = "^AUTHOR *= *(.*) AND TITLE *= *(.*) AND YEAR *= *(.*)"
-        If oRegEx.Test(sQuery) Then
-            Set oFields = oRegEx.Execute(sQuery)
-            sAuthor = oFields(0).Submatches(0)
-            sAuthor = Replace(sAuthor, "*", "?")
-            sTitle = oFields(0).Submatches(1)
-            sTitle = Replace(sTitle, "*", "?")
-            sYear = oFields(0).Submatches(2)
-            sCQLQuery = "@and @attr 1=31 " & sYear & " @and " & _
-                "@attr 1=1 @attr 3=1 @attr 4=1 """ & sAuthor & """ " & _
-                "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
-        Else
-            sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
+    
+    Dim aHoldingsFilter() As String
+    bHasHoldingsFilter = False
+    
+    For i = (UBound(aSearchTerms) - 1) To 0 Step -1
+        sBoolean = aSearchTerms(i, 0)
+        Dim sIndex As String
+        sIndex = aSearchTerms(i, 1)
+        sIndex = GetOCLCSearchKey(sIndex)
+        sOperator = aSearchTerms(i, 2)
+        Dim sQuery As String
+        sQuery = CStr(aSearchTerms(i, 3))
+        sQuery = GetColumnContents(oQueryRow, sQuery)
+        sQuery = Replace(sQuery, """", "\""")
+        
+        If sQuery = "FALSE" Then
+            sQuery = ""
         End If
-    ElseIf sSearchType = "Z-Title-Date" Then
-        oRegEx.Pattern = "^TITLE *= *(.*) AND YEAR *= *(.*)"
-        If oRegEx.Test(sQuery) Then
-            Set oFields = oRegEx.Execute(sQuery)
-            sTitle = oFields(0).Submatches(0)
-            sTitle = Replace(sTitle, "*", "?")
-            sYear = oFields(0).Submatches(1)
-            sCQLQuery = "@and @attr 1=31 " & sYear & " " & _
-                "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
-        Else
-            sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
+    
+        oConverter.Open
+        oConverter.Charset = "UTF-8"
+        oConverter.Type = 2
+        oConverter.WriteText sQuery
+        oConverter.Position = 0
+        oConverter.Charset = "ISO-8859-1"
+        sQuery = oConverter.ReadText
+        sQuery = Replace(sQuery, ChrW(239) & ChrW(187) & ChrW(191), "") 'BOM
+        oConverter.Close
+        
+        If Trim(sQuery) = "" Then
+            GoTo NextTerm
         End If
-    Else
-        aSearchKeys = Split(sQuery, "|")
-        For i = 0 To UBound(aSearchKeys)
-            If sCQLQuery <> "" Then
-                sCQLQuery = "@or " & sCQLQuery
+        If sIndex = "Holdings Code(s)" Then
+            aHoldingsFilter = Split(sQuery, "|")
+            bHasHoldingsFilter = True
+            GoTo NextTerm
+        End If
+        Select Case sIndex
+            Case "7"
+                sQuery = NormalizeISBN(sQuery)
+            Case "8"
+                sQuery = NormalizeISSN(sQuery)
+            Case "12"
+                sQuery = NormalizeOCLC(sQuery)
+        End Select
+        
+        If sQuery = "INVALID" Then
+            Z3950Search = "INVALID"
+            Exit Function
+        End If
+        
+        Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
+            sQuery = Replace(sQuery, "||", "|")
+        Loop
+        If Right(sQuery, 1) = "|" Then
+            sQuery = Left(sQuery, Len(sQuery) - 1)
+        End If
+        
+        If sQuery <> "" Then
+            If sIndex = 4 Then
+                sIndex = "@attr 4=1 @attr 1=" & sIndex
+            ElseIf Left(sIndex, 1) <> "@" Then
+                sIndex = "@attr 1=" & sIndex
             End If
-            sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
-        Next i
-    End If
+            If InStr(1, sQuery, "|") Then
+                sQuery = "@or " & sIndex & " """ & Left(sQuery, InStr(1, sQuery, "|") - 1) & _
+                    """ " & sIndex & " """ & Mid(sQuery, InStr(1, sQuery, "|") + 1) & """"
+            Else
+                sQuery = sIndex & " """ & sQuery & """"
+            End If
+        
+            If sBoolean <> "" Then
+                sBoolean = "@" & LCase(sBoolean) & " "
+            End If
+            If sCQLQuery <> "" Then
+                    sCQLQuery = sCQLQuery & " "
+            End If
+            sCQLQuery = sBoolean & sCQLQuery & sQuery
+
+        End If
+NextTerm:
+    Next i
+    
+    'sSearchIndex = "1016"
+    'If sSearchType = "Title" Then
+    '    sSearchIndex = "4"
+    'ElseIf sSearchType = "ISBN" Then
+    '    sSearchIndex = "7"
+    '    sQuery = NormalizeISBN(sQuery)
+    'ElseIf sSearchType = "ISSN" Then
+    '    sSearchIndex = "8"
+    '    sQuery = NormalizeISSN(sQuery)
+    'ElseIf sSearchType = "OCLC No." Then
+    '    sSearchIndex = "12"
+    '    sQuery = NormalizeOCLC(sQuery)
+    'End If
+    
+    'sQuery = Replace(sQuery, """", "\""")
+    
+    'sCQLQuery = ""
+    'If sSearchType = "Z-Author-Title-Date" Then
+    '    oRegEx.Pattern = "^AUTHOR *= *(.*) AND TITLE *= *(.*) AND YEAR *= *(.*)"
+    '    If oRegEx.Test(sQuery) Then
+    '        Set oFields = oRegEx.Execute(sQuery)
+    '        sAuthor = oFields(0).Submatches(0)
+    '        sAuthor = Replace(sAuthor, "*", "?")
+    '        sTitle = oFields(0).Submatches(1)
+    '        sTitle = Replace(sTitle, "*", "?")
+    '        sYear = oFields(0).Submatches(2)
+    '        sCQLQuery = "@and @attr 1=31 " & sYear & " @and " & _
+    '            "@attr 1=1 @attr 3=1 @attr 4=1 """ & sAuthor & """ " & _
+    '            "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
+    '    Else
+    '        sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
+    '    End If
+    'ElseIf sSearchType = "Z-Title-Date" Then
+    '    oRegEx.Pattern = "^TITLE *= *(.*) AND YEAR *= *(.*)"
+    '    If oRegEx.Test(sQuery) Then
+    '        Set oFields = oRegEx.Execute(sQuery)
+    '        sTitle = oFields(0).Submatches(0)
+    '        sTitle = Replace(sTitle, "*", "?")
+    '        sYear = oFields(0).Submatches(1)
+    '        sCQLQuery = "@and @attr 1=31 " & sYear & " " & _
+    '            "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
+    '    Else
+    '        sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
+    '    End If
+    'Else
+    '    aSearchKeys = Split(sQuery, "|")
+    '    For i = 0 To UBound(aSearchKeys)
+    '        If sCQLQuery <> "" Then
+    '            sCQLQuery = "@or " & sCQLQuery
+    '        End If
+     '       sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
+    '    Next i
+    'End If
+    
+    Debug.Print sCQLQuery
     
     zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
     zcount = ZOOM_resultset_size(zrs)
+    sAllRecords = ""
     If zcount > 0 Then
         sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
         If zcount > iMaximumRecords Then
@@ -1090,6 +1261,34 @@ Function Z3950Search(sQuery As String, sSearchType As String, sSource As String)
             sResultXML = Replace(sResultXML, "<record", "<record><recordData><record")
             sResultXML = Replace(sResultXML, "</record>", "</record></recordData></record>")
             sResultXML = Replace(sResultXML, Chr(10), "")
+            
+            If bHasHoldingsFilter Then
+                iHoldingsPos = InStr(1, sResultXML, "<datafield tag=""948""")
+                If iHoldingsPos > 0 Then
+                    sHoldingsSection = Mid(sResultXML, iHoldingsPos)
+                    If InStr(1, sHoldingsSection, "subfield code=""c""") Then
+                        bFilterTest = False
+                        For j = 0 To UBound(aHoldingsFilter)
+                            sHoldingsCode = aHoldingsFilter(j)
+                            If InStr(1, sHoldingsSection, "subfield code=""c"">" & sHoldingsCode & "<") Then
+                                bFilterTest = True
+                            ElseIf InStr(1, sHoldingsSection, "subfield code=""h"">") Then
+                                If InStr(1, sHoldingsSection, "Held by " & sHoldingsCode) Then
+                                    bFilterTest = True
+                                Else
+                                    Z3950Search = "TOO MANY HOLDINGS"
+                                    Exit Function
+                                End If
+                            End If
+                        Next j
+                        If Not bFilterTest Then
+                            sResultXML = ""
+                        End If
+                    End If
+                Else
+                    sResultXML = ""
+                End If
+            End If
             sAllRecords = sAllRecords & sResultXML
         Next i
         sAllRecords = sAllRecords & "</records></searchRetrieveResponse>"
@@ -1111,14 +1310,14 @@ Function GetColumnContents(ByVal oRow As Range, sValue As String) As String
     GetColumnContents = sValue
 End Function
 
-Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
+Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
     If oXMLHTTP Is Nothing Then
         Initialize
     End If
     
     Dim bAdvancedSearch As Boolean
     bAdvancedSearch = False
-    If bIsAlma And LookupDialog.SearchListBox.ListCount > 0 Then
+    If LookupDialog.SearchListBox.ListCount > 0 Then
         bAdvancedSearch = True
     End If
     
@@ -1127,7 +1326,7 @@ Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
     
     If Not bAdvancedSearch Then
         Dim sSearchString As String
-        sSearchString = GetColumnContents(sQueryRow, LookupDialog.SearchValueBox.Value)
+        sSearchString = GetColumnContents(oQueryRow, LookupDialog.SearchValueBox.Value)
         If sSearchString = "FALSE" Or sSearchString = "" Then
             Lookup = ""
             Exit Function
@@ -1190,13 +1389,13 @@ Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
     ElseIf sCatalogURL = "source:worldcat" Then
         sURL = "z3950"
     Else
-        sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType, bAdvancedSearch, sQueryRow)
+        sURL = ConstructURL(sCatalogURL, sQuery1, sSearchType, bAdvancedSearch, oQueryRow)
     End If
     sHoldingsURL = Replace(sURL, "&query", "&recordSchema=isohold&query")
     sResponse = ""
 
     If sURL = "z3950" Then
-        sResponse = Z3950Search(sQuery1, sSearchType, sCatalogURL)
+        sResponse = Z3950Search(sCatalogURL, sQuery1, sSearchType, bAdvancedSearch, oQueryRow)
     Else
         With oXMLHTTP
             .Open "GET", sURL, True
@@ -1204,9 +1403,15 @@ Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
                 .setRequestHeader "Authorization", "Basic " + sAuth
             End If
             .Send
-            Do While .readyState <> 4
-                DoEvents
-            Loop
+            
+            On Error Resume Next
+            bSuccess = .waitForResponse(iTimeoutSecs)
+            
+            If Not bSuccess Then
+                Lookup = ""
+                Exit Function
+            End If
+            
             sResponse = .responseText
             sHoldings = ""
             If sCatalogURL = "source:borrowdirect" Then
@@ -1239,12 +1444,13 @@ Function Lookup(ByVal sQueryRow As Range, sCatalogURL As String) As String
                    .setRequestHeader "Authorization", "Basic " + sAuth
                 End If
                 .Send
-                Do While .readyState <> 4
-                    DoEvents
-                Loop
-                sHoldings = .responseText
-                If InStr(1, sHoldings, "searchRetrieveResponse") = 0 Then
-                    bIsoholdEnabled = False
+                On Error Resume Next
+                bSuccess = .waitForResponse(iTimeoutSecs)
+                If bSuccess Then
+                    sHoldings = .responseText
+                    If InStr(1, sHoldings, "searchRetrieveResponse") = 0 Then
+                        bIsoholdEnabled = False
+                    End If
                 End If
             End If
         End With
@@ -1741,7 +1947,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
     If sResultType = "999$sp" Then
         ExtractField = CollapseIPLCHoldings(ExtractField)
     End If
-    If LookupDialog.CatalogURLBox.Value = "source:worldcat" And sResultTypeAll = "948$ch#" Then
+    If bIsWorldCat And sResultTypeAll = "948$ch#" Then
         sCodesDeDupe = ""
         iCodeCount = 0
         oRegEx.Pattern = "[0-9]* OTHER HOLDINGS"
@@ -1815,6 +2021,7 @@ Function NormalizeISBN(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
+    sQuery = Replace(sQuery, " ", "")
     sQuery = Replace(sQuery, "-", "")
     oRegEx.Pattern = "[0-9]{13}"
     Set oMatch = oRegEx.Execute(sQuery)
@@ -1937,6 +2144,7 @@ Function NormalizeOCLC(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
+    sQuery = Replace(sQuery, " ", "")
     oRegEx.Pattern = "^[^0-9]*"
     sQuery = oRegEx.Replace(sQuery, "")
     oRegEx.Pattern = "[^0-9].*$"
@@ -1956,6 +2164,7 @@ Function NormalizeISSN(sQuery As String) As String
         .IgnoreCase = True
     End With
     sQuery = Replace(sQuery, "-", "")
+    sQuery = Replace(sQuery, " ", "")
     oRegEx.Pattern = "[0-9]{7}([0-9]|X)"
     Set oMatch = oRegEx.Execute(sQuery)
     If oMatch.Count = 0 Then
