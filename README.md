@@ -158,3 +158,8 @@ Note too that the "Value" field can be either a column letter (enclosed in doubl
 
 The bottom part of the dialog (result types and field sets) functions in the same way as the previous version of the plugin.  See the main documentation above for details. 
 
+One can also perform multi-index searches in WorldCat.  The search can be constructed in a similar way to Alma searches, with the following differences:
+- In the "Field Name" drop-down, there is an option "Holdings Code".  This allows you to filter results to only include records with the holdings code specified in the "Value" field.  One can also set "Value" to a list of holdings codes separatd by the vertical bar | character.  In this case, a record will be included if it is held by *any* institution in the list.
+- The "Field Name" drop-down also has an option "Other fields...", which will display a list of all fields searchable in the WorldCat Z39.50 service.  The number next to each index is the "use atttribute" value of that index.  See the following documentation from OCLC for details about which MARC fields correspond to each of these indexes:
+https://help.oclc.org/Metadata_Services/Z3950_Cataloging/Use_Z39.50_Cataloging/Search_tips_for_OCLC_Z39.50_Cataloging
+- There is not currently an option to choose a "relation" for each part of the search, such as =, <, >, etc.  Phrase searching is used for titles, and word searching for other other indexes. However, one can manually enter a list of Z39.50 attributes in the "Field Name" box in order to override these defaults.  For example, the string `@attr 4=1 @attr 1=1003` specifies an author phrase search.
