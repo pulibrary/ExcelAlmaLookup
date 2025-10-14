@@ -1113,6 +1113,9 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
         oConverter.Close
         
         If Trim(sQuery) = "" Then
+            If i = 0 And Left(sCQLQuery, 1) = "@" Then
+                sCQLQuery = Mid(sCQLQuery, InStr(2, sCQLQuery, " ") + 1)
+            End If
             GoTo NextTerm
         End If
         If sIndex = "Holdings Code(s)" Then
