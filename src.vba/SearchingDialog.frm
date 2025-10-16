@@ -1,5 +1,5 @@
 Attribute VB_Name = "SearchingDialog"
-Attribute VB_Base = "0{F2481787-B4FF-4292-B667-4EE96127D92F}{3926FE0B-D7AF-4E4B-A641-7BD9127C89E7}"
+Attribute VB_Base = "0{47594B1C-6B42-4B2A-85B5-CE097AA0B173}{EF4F9C27-358F-4774-A274-B4BA6351D779}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True

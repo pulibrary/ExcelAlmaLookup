@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{83780163-F0E4-4F6E-BB39-208390B085E7}{197CD4FE-336D-4E69-B459-0392D703BC7E}"
+Attribute VB_Base = "0{8C92A95F-5196-426C-A878-72E710F23767}{F68BC690-1CF3-4C3A-8DEC-BC5CFBD42A62}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -484,7 +484,7 @@ Private Sub SearchFieldCombo_Change()
             If IsNull(Catalog.aExplainFields) Then
                 Catalog.aExplainFields = Catalog.GetAllFields()
             End If
-            If Not IsNull(aExplainFields) Then
+            If Not IsNull(Catalog.aExplainFields) Then
                 AdditionalFieldsDialog.SRUFields.List = Catalog.aExplainFields
             Else
                 MsgBox ("Cannot access catalog.  Please confirm the Alma URL is correct.")

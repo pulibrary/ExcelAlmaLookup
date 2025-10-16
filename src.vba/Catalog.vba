@@ -1130,6 +1130,10 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
                 sQuery = NormalizeISSN(sQuery)
             Case "12"
                 sQuery = NormalizeOCLC(sQuery)
+            Case "31"
+                sQuery = NormalizeDate(sQuery, True)
+            Case "5031"
+                sQuery = NormalizeDate(sQuery, False)
         End Select
         
         If sQuery = "INVALID" Then
@@ -2139,6 +2143,29 @@ Function GenerateCheckDigit(sISXN As String) As String
     If GenerateCheckDigit <> sISXN Then
         GenerateCheckDigit = "INVALID"
     End If
+End Function
+
+Function NormalizeDate(sQuery As String, bStart As Boolean) As String
+    With oRegEx
+       .MultiLine = False
+        .Global = True
+        .IgnoreCase = True
+    End With
+    oRegEx.Pattern = "[^0-9]"
+    sQuery = oRegEx.Replace(sQuery, "")
+    If Len(sQuery) < 4 Then
+        sQuery = "FALSE"
+    Else
+        If bStart Then
+            sQuery = Left(sQuery, 4)
+        Else
+            sQuery = Right(sQuery, 4)
+        End If
+    End If
+    If Len(sQuery) < 4 Then
+        sQuery = "FALSE"
+    End If
+    NormalizeDate = sQuery
 End Function
 
 Function NormalizeOCLC(sQuery As String) As String
