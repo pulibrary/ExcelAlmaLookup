@@ -54,6 +54,7 @@ Private Declare PtrSafe Function ZOOM_connection_search_pqf Lib "yaz5.dll" (ByVa
 
 Private Declare PtrSafe Function ZOOM_resultset_size Lib "yaz5.dll" (ByVal r As LongPtr) As Integer
 Private Declare PtrSafe Function ZOOM_resultset_record Lib "yaz5.dll" (ByVal r As LongPtr, ByVal pos As Integer) As LongPtr
+
 Private Declare PtrSafe Sub ZOOM_resultset_option_set Lib "yaz5.dll" (ByVal r As LongPtr, ByVal key As String, ByVal val As String)
 Private Declare PtrSafe Sub ZOOM_resultset_destroy Lib "yaz5.dll" (ByVal r As LongPtr)
 
@@ -1087,7 +1088,7 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
     Dim aHoldingsFilter() As String
     bHasHoldingsFilter = False
     
-    For i = (UBound(aSearchTerms) - 1) To 0 Step -1
+    For i = 0 To (UBound(aSearchTerms) - 1)
         sBoolean = aSearchTerms(i, 0)
         Dim sIndex As String
         sIndex = aSearchTerms(i, 1)
@@ -1112,132 +1113,96 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
         sQuery = Replace(sQuery, ChrW(239) & ChrW(187) & ChrW(191), "") 'BOM
         oConverter.Close
         
-        If Trim(sQuery) = "" Then
-            If i = 0 And Left(sCQLQuery, 1) = "@" Then
-                sCQLQuery = Mid(sCQLQuery, InStr(2, sCQLQuery, " ") + 1)
-            End If
-            GoTo NextTerm
-        End If
         If sIndex = "Holdings Code(s)" Then
             aHoldingsFilter = Split(sQuery, "|")
             bHasHoldingsFilter = True
             GoTo NextTerm
         End If
-        Select Case sIndex
-            Case "7"
-                sQuery = NormalizeISBN(sQuery)
-            Case "8"
-                sQuery = NormalizeISSN(sQuery)
-            Case "12"
-                sQuery = NormalizeOCLC(sQuery)
-            Case "31"
-                sQuery = NormalizeDate(sQuery, True)
-            Case "5031"
-                sQuery = NormalizeDate(sQuery, False)
-        End Select
-        
-        If sQuery = "INVALID" Then
-            Z3950Search = "INVALID"
-            Exit Function
+        If sQuery <> "" Then
+            Select Case sIndex
+                Case "7"
+                    sQuery = NormalizeISBN(sQuery)
+                Case "8"
+                    sQuery = NormalizeISSN(sQuery)
+                Case "12"
+                    sQuery = NormalizeOCLC(sQuery)
+                Case "31"
+                    sQuery = NormalizeDate(sQuery, True)
+                Case "5031"
+                    sQuery = NormalizeDate(sQuery, False)
+            End Select
+            
+            If sQuery = "INVALID" Then
+                Z3950Search = "INVALID"
+                Exit Function
+            End If
         End If
         
-        Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
-            sQuery = Replace(sQuery, "||", "|")
+        If sIndex = 4 Then
+            sIndex = "@attr 4=1 @attr 1=" & sIndex
+        ElseIf Left(sIndex, 1) <> "@" Then
+            sIndex = "@attr 1=" & sIndex
+        End If
+        
+        Do While (InStr(1, sQuery, "||") > 0)
+            sTerm = Replace(sQuery, "||", "|")
         Loop
         If Right(sQuery, 1) = "|" Then
-            sQuery = Left(sQuery, Len(sQuery) - 1)
+            sTerm = Left(sQuery, Len(sQuery) - 1)
+        End If
+        If InStr(1, sQuery, "|") Then
+            sQuery = "@or " & sIndex & " """ & Left(sQuery, InStr(1, sQuery, "|") - 1) & _
+                """ " & sIndex & " """ & Mid(sQuery, InStr(1, sQuery, "|") + 1) & """"
+        Else
+            sQuery = sIndex & " """ & sQuery & """"
         End If
         
-        If sQuery <> "" Then
-            If sIndex = 4 Then
-                sIndex = "@attr 4=1 @attr 1=" & sIndex
-            ElseIf Left(sIndex, 1) <> "@" Then
-                sIndex = "@attr 1=" & sIndex
-            End If
-            If InStr(1, sQuery, "|") Then
-                sQuery = "@or " & sIndex & " """ & Left(sQuery, InStr(1, sQuery, "|") - 1) & _
-                    """ " & sIndex & " """ & Mid(sQuery, InStr(1, sQuery, "|") + 1) & """"
-            Else
-                sQuery = sIndex & " """ & sQuery & """"
-            End If
         
-            If sBoolean <> "" Then
-                sBoolean = "@" & LCase(sBoolean) & " "
-            End If
-            If sCQLQuery <> "" Then
-                    sCQLQuery = sCQLQuery & " "
-            End If
-            sCQLQuery = sBoolean & sCQLQuery & sQuery
-
+        If sCQLQuery <> "" Then
+            sCQLQuery = sCQLQuery & " "
         End If
+        If sBoolean <> "" Then
+            sCQLQuery = sCQLQuery & "$" & sBoolean & " "
+        End If
+        sCQLQuery = sCQLQuery & sQuery
 NextTerm:
     Next i
     
-    'sSearchIndex = "1016"
-    'If sSearchType = "Title" Then
-    '    sSearchIndex = "4"
-    'ElseIf sSearchType = "ISBN" Then
-    '    sSearchIndex = "7"
-    '    sQuery = NormalizeISBN(sQuery)
-    'ElseIf sSearchType = "ISSN" Then
-    '    sSearchIndex = "8"
-    '    sQuery = NormalizeISSN(sQuery)
-    'ElseIf sSearchType = "OCLC No." Then
-    '    sSearchIndex = "12"
-    '    sQuery = NormalizeOCLC(sQuery)
-    'End If
+    sPrefixQuery = ""
     
-    'sQuery = Replace(sQuery, """", "\""")
+    aOrTerms = Split(sCQLQuery, " $OR ")
+    For i = 0 To UBound(aOrTerms)
+        aAndTerms = Split(aOrTerms(i), " $AND ")
+        sAndTermString = ""
+        For j = 0 To UBound(aAndTerms)
+            sTerm = aAndTerms(j)
+            If sTerm <> "" Then
+                If sAndTermString <> "" Then
+                    sAndTermString = "@and " & sAndTermString
+                End If
+                sAndTermString = sAndTermString & " " & sTerm
+            End If
+        Next j
+        If sAndTermString <> "" Then
+            If sPrefixQuery <> "" Then
+                sPrefixQuery = "@or " & sPrefixQuery
+            End If
+            sPrefixQuery = sPrefixQuery & " " & sAndTermString
+        End If
+    Next i
+        
+    Debug.Print sPrefixQuery
     
-    'sCQLQuery = ""
-    'If sSearchType = "Z-Author-Title-Date" Then
-    '    oRegEx.Pattern = "^AUTHOR *= *(.*) AND TITLE *= *(.*) AND YEAR *= *(.*)"
-    '    If oRegEx.Test(sQuery) Then
-    '        Set oFields = oRegEx.Execute(sQuery)
-    '        sAuthor = oFields(0).Submatches(0)
-    '        sAuthor = Replace(sAuthor, "*", "?")
-    '        sTitle = oFields(0).Submatches(1)
-    '        sTitle = Replace(sTitle, "*", "?")
-    '        sYear = oFields(0).Submatches(2)
-    '        sCQLQuery = "@and @attr 1=31 " & sYear & " @and " & _
-    '            "@attr 1=1 @attr 3=1 @attr 4=1 """ & sAuthor & """ " & _
-    '            "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
-    '    Else
-    '        sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
-    '    End If
-    'ElseIf sSearchType = "Z-Title-Date" Then
-    '    oRegEx.Pattern = "^TITLE *= *(.*) AND YEAR *= *(.*)"
-    '    If oRegEx.Test(sQuery) Then
-    '        Set oFields = oRegEx.Execute(sQuery)
-    '        sTitle = oFields(0).Submatches(0)
-    '        sTitle = Replace(sTitle, "*", "?")
-    '        sYear = oFields(0).Submatches(1)
-    '        sCQLQuery = "@and @attr 1=31 " & sYear & " " & _
-    '            "@attr 1=4 @attr 3=1 @attr 4=1 """ & sTitle & """"
-    '    Else
-    '        sCQLQuery = "@attr 4=1 @attr 1=1016 " & sQuery
-    '    End If
-    'Else
-    '    aSearchKeys = Split(sQuery, "|")
-    '    For i = 0 To UBound(aSearchKeys)
-    '        If sCQLQuery <> "" Then
-    '            sCQLQuery = "@or " & sCQLQuery
-    '        End If
-     '       sCQLQuery = sCQLQuery & "@attr 4=1 @attr 1=" & sSearchIndex & " """ & aSearchKeys(i) & """"
-    '    Next i
-    'End If
-    
-    Debug.Print sCQLQuery
-    
-    zrs = ZOOM_connection_search_pqf(oZConn, sCQLQuery)
+    zrs = ZOOM_connection_search_pqf(oZConn, sPrefixQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
     zcount = ZOOM_resultset_size(zrs)
+        
     sAllRecords = ""
     If zcount > 0 Then
-        sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>"
         If zcount > iMaximumRecords Then
             zcount = iMaximumRecords
         End If
+        
         For i = 0 To zcount - 1
             Dim zptr As LongPtr
             Dim zsize As Long
@@ -1298,7 +1263,8 @@ NextTerm:
             End If
             sAllRecords = sAllRecords & sResultXML
         Next i
-        sAllRecords = sAllRecords & "</records></searchRetrieveResponse>"
+        sAllRecords = "<searchRetrieveResponse xmlns=""http://www.loc.gov/zing/srw/""><records>" & _
+            sAllRecords & "</records></searchRetrieveResponse>"
     End If
     Z3950Search = sAllRecords
     ZOOM_resultset_destroy (zrs)
@@ -1404,6 +1370,7 @@ Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
     If sURL = "z3950" Then
         sResponse = Z3950Search(sCatalogURL, sQuery1, sSearchType, bAdvancedSearch, oQueryRow)
     Else
+        Debug.Print sURL
         With oXMLHTTP
             .Open "GET", sURL, True
             If sAuth <> "" Then
@@ -1487,7 +1454,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
         sResultString = ""
         iCurrentPos = 1
         Set oRecords = oRegEx.Execute(sResultJSON)
-        iRecords = oRecords.Count
+        iRecords = oRecords.count
         If iRecords = 0 Then
             ExtractField = "FALSE"
             Exit Function
@@ -1514,7 +1481,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "010"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Lccn S"""
                         Set oLCCNs = oRegEx.Execute(sCurrentRecord)
-                        If oLCCNs.Count > 0 Then
+                        If oLCCNs.count > 0 Then
                             sLCCNs = oLCCNs(0).Submatches(0)
                             sLCCNs = Replace(sLCCNs, """,""", ChrW(166))
                             sLCCNs = Replace(sLCCNs, """", "")
@@ -1525,7 +1492,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "020"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
                         Set oISBNs = oRegEx.Execute(sCurrentRecord)
-                        If oISBNs.Count > 0 Then
+                        If oISBNs.count > 0 Then
                             sISBNs = oISBNs(0).Submatches(0)
                             sISBNs = Replace(sISBNs, """,""", ChrW(166))
                             sISBNs = Replace(sISBNs, """", "")
@@ -1536,7 +1503,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "035$a#(OCoLC)"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Oclc S"""
                         Set oOCLCs = oRegEx.Execute(sCurrentRecord)
-                        If oOCLCs.Count > 0 Then
+                        If oOCLCs.count > 0 Then
                             sOCLCs = oOCLCs(0).Submatches(0)
                             sOCLCs = Replace(sOCLCs, """,""", ChrW(166))
                             sOCLCs = Replace(sOCLCs, """", "")
@@ -1547,7 +1514,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "245"
                         oRegEx.Pattern = """attributes"":{""title"":""([^""]*)"""
                         Set oTitle = oRegEx.Execute(sCurrentRecord)
-                        If oTitle.Count > 0 Then
+                        If oTitle.count > 0 Then
                             ExtractField = ExtractField & oTitle(0).Submatches(0)
                         End If
                     Case "recap"
@@ -1555,7 +1522,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Set oLoc = oRegEx.Execute(sCurrentRecord)
                         oRegEx.Pattern = """location"":""([^""]*)"""
                         Set oLocName = oRegEx.Execute(sCurrentRecord)
-                        If oLoc.Count > 0 Then
+                        If oLoc.count > 0 Then
                             sLoc = oLoc(0).Submatches(0)
                             Select Case sLoc
                                 Case "scsbhl"
@@ -1565,7 +1532,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                                 Case "scsbcul"
                                     sLoc = "Columbia"
                                 Case Else
-                                    For i = 0 To oLocName.Count - 1
+                                    For i = 0 To oLocName.count - 1
                                         If InStr(1, oLocName(i).Submatches(0), "Remote Storage") > 0 Then
                                             sLoc = "Princeton"
                                             Exit For
@@ -1587,7 +1554,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         sCGD = ""
                         Set oCGD = oRegEx.Execute(sCurrentRecord)
                         sRecapLoc = ""
-                        For i = 0 To oCGD.Count - 1
+                        For i = 0 To oCGD.count - 1
                             If oCGD(i).Submatches(0) <> "" Then
                                 sRecapLoc = oCGD(i).Submatches(0)
                                 sRecapLoc = Replace(sRecapLoc, "scsb", "")
@@ -1644,7 +1611,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
               iSubLength = -1
               oRegEx.Pattern = "\(([0-9]+),([0-9]+)\)$"
               Set oMatch = oRegEx.Execute(sResultType)
-              If oMatch.Count = 1 Then
+              If oMatch.count = 1 Then
                 iSubStartPos = oMatch(0).Submatches(0)
                 iSubLength = oMatch(0).Submatches(1)
                 If iSubLength = 0 Then
@@ -1959,7 +1926,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
         iCodeCount = 0
         oRegEx.Pattern = "[0-9]* OTHER HOLDINGS"
         Set oMatch = oRegEx.Execute(ExtractField)
-        If oMatch.Count > 0 Then
+        If oMatch.count > 0 Then
             ExtractField = CStr(CInt(Replace(oMatch(0), " OTHER HOLDINGS", "")) + 1)
         Else
             aCodesA = Split(ExtractField, "|")
@@ -2014,7 +1981,7 @@ Function DecodeIPLCUnicode(sSource As String) As String
     oRegEx.Pattern = "\\u[0-9a-f]{4}"
     oRegEx.Global = True
     Set oMatch = oRegEx.Execute(sSource)
-    For i = 0 To oMatch.Count - 1
+    For i = 0 To oMatch.count - 1
         sDecoded = Mid(CStr(oMatch.Item(i)), 3)
         sDecoded = ChrW(CDec("&H" & sDecoded))
         sSource = Replace(sSource, oMatch.Item(i), sDecoded)
@@ -2032,10 +1999,10 @@ Function NormalizeISBN(sQuery As String) As String
     sQuery = Replace(sQuery, "-", "")
     oRegEx.Pattern = "[0-9]{13}"
     Set oMatch = oRegEx.Execute(sQuery)
-    If oMatch.Count = 0 Then
+    If oMatch.count = 0 Then
         oRegEx.Pattern = "[0-9]{9}([0-9]|X)"
         Set oMatch = oRegEx.Execute(sQuery)
-        If oMatch.Count = 0 Then
+        If oMatch.count = 0 Then
             NormalizeISBN = ""
         Else
             NormalizeISBN = oMatch.Item(0)
@@ -2197,7 +2164,7 @@ Function NormalizeISSN(sQuery As String) As String
     sQuery = Replace(sQuery, " ", "")
     oRegEx.Pattern = "[0-9]{7}([0-9]|X)"
     Set oMatch = oRegEx.Execute(sQuery)
-    If oMatch.Count = 0 Then
+    If oMatch.count = 0 Then
         NormalizeISSN = ""
     Else
         NormalizeISSN = Left(sQuery, 8)
@@ -2211,7 +2178,7 @@ Public Function HtmlDecode(StringToDecode As Variant) As String
     oRegEx.Global = True
     oRegEx.Pattern = "&[^; ]+;"
     Set oMatch = oRegEx.Execute(StringToDecode)
-    For i = 0 To oMatch.Count - 1
+    For i = 0 To oMatch.count - 1
         sEntity = CStr(oMatch.Item(i))
         StringToDecode = Replace(StringToDecode, sEntity, LCase(sEntity))
     Next i

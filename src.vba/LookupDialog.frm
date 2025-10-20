@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{8C92A95F-5196-426C-A878-72E710F23767}{F68BC690-1CF3-4C3A-8DEC-BC5CFBD42A62}"
+Attribute VB_Base = "0{40A7DDEC-813F-4CD2-8A90-0CCED03D8536}{F0B63B0A-BD9F-40BB-8FE1-BFD552CF6167}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -61,7 +61,10 @@ Private Sub CatalogURLBox_Change()
         Catalog.bIsAlma = True
         Catalog.bIsWorldCat = False
         If InStr(1, LookupDialog.CatalogURLBox, "source:") = 1 Then
-            Catalog.bIsAlma = False
+            If Catalog.bIsAlma = True Then
+                Catalog.bIsAlma = False
+                Catalog.aExplainFields = Null
+            End If
             If LookupDialog.CatalogURLBox = "source:worldcat" Then
                 Catalog.bIsWorldCat = True
             End If
@@ -235,7 +238,7 @@ Private Sub OKButton_Click()
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
         With oSourceRange
-            iRowCount = .Rows.Count
+            iRowCount = .Rows.count
             iSourceColumn = .Cells(1, 1).Column
             iFirstSourceRow = .Cells(1, 1).Row
             If LookupRange.Value Like "*#*" Then
@@ -243,8 +246,8 @@ Private Sub OKButton_Click()
             Else
                 iLastSourceRow = .Range("A999999").End(xlUp).Row
             End If
-            If iFirstSourceRow + .Rows.Count - 1 < iLastSourceRow Then
-                iLastSourceRow = iFirstSourceRow + .Rows.Count - 1
+            If iFirstSourceRow + .Rows.count - 1 < iLastSourceRow Then
+                iLastSourceRow = iFirstSourceRow + .Rows.count - 1
             End If
         End With
         iStartIndex = 1
@@ -369,7 +372,7 @@ NextRow:
                 End If
                 If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then
                     minRow = ActiveWindow.VisibleRange.Row
-                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
+                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.count
                     If iFirstSourceRow + i <= minRow + 1 Or iFirstSourceRow + i >= maxRow - 1 Then
                         ActiveWindow.SmallScroll down:=(iFirstSourceRow + i - (maxRow + minRow) / 2) + 1
                     End If
@@ -478,6 +481,18 @@ Private Sub SaveSetButton_Click()
 End Sub
 Private Sub SearchFieldCombo_Change()
     sField = LookupDialog.SearchFieldCombo.Value
+    If Catalog.bIsWorldCat And LookupDialog.BooleanCombo.ListCount > 0 Then
+        If sField = "Holdings Code(s)" Then
+            LookupDialog.BooleanCombo.Clear
+            LookupDialog.BooleanCombo.AddItem "IF"
+            LookupDialog.BooleanCombo.ListIndex = 0
+        ElseIf LookupDialog.BooleanCombo.List(0) <> "AND" Then
+            LookupDialog.BooleanCombo.Clear
+            LookupDialog.BooleanCombo.AddItem "AND"
+            LookupDialog.BooleanCombo.AddItem "OR"
+            LookupDialog.BooleanCombo.ListIndex = 0
+        End If
+    End If
     If sField = "Other fields..." Then
         AdditionalFieldsDialog.FilterBox.Value = ""
         If Catalog.bIsAlma Then

@@ -1,5 +1,5 @@
 Attribute VB_Name = "AdditionalFieldsDialog"
-Attribute VB_Base = "0{B1372AA4-381D-4A81-B91F-7EB3CE841AA6}{503EFA3D-F07F-4836-92E6-1AC2B13E2D5B}"
+Attribute VB_Base = "0{3CC19B7C-0EE1-4E4C-9CD9-D695354DC0B6}{E81FEF7D-17D8-4B54-B55F-CE363524A441}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -24,6 +24,7 @@ Private Sub PopulateSearchField()
 End Sub
 
 Private Sub CancelAdditionalField_Click()
+    LookupDialog.SearchFieldCombo.ListIndex = 0
     AdditionalFieldsDialog.Hide
 End Sub
 
