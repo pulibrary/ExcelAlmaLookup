@@ -247,6 +247,8 @@ Sub LookupInterface(control As IRibbonControl)
     PopulateIndexLists
     RedrawButtons
     PopulateCombos
+    LoadSavedSearchParams
+    
     
     sFileName = ActiveWorkbook.Name
     sSheetName = ActiveSheet.Name
@@ -401,6 +403,73 @@ Sub DeleteFieldSet(sSetName)
     Next i
 End Sub
 
+Sub ClearSavedSearchParams()
+    On Error Resume Next
+    If IsArray(GetAllSettings(sRegistryDir, "Search")) Then
+        DeleteSetting sRegistryDir, "Search"
+    End If
+    On Error GoTo 0
+End Sub
+
+Sub LoadSavedSearchParams()
+    On Error Resume Next
+    If Not IsArray(GetAllSettings(sRegistryDir, "Search")) Then
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    LookupDialog.IgnoreHeaderCheckbox.Value = GetSetting(sRegistryDir, "Search", "_IgnoreHeader", True)
+    LookupDialog.GenerateHeaderCheckBox.Value = GetSetting(sRegistryDir, "Search", "_GenerateHeader", False)
+    LookupDialog.ValidateCheckBox.Value = GetSetting(sRegistryDir, "Search", "_ValidateISXN", True)
+    LookupDialog.IncludeSuppressed.Value = GetSetting(sRegistryDir, "Search", "_IncludeSuppressed", True)
+    
+    iMax = GetSetting(sRegistryDir, "Search", "_Max", 0)
+    
+    LookupDialog.BooleanCombo.Value = GetSetting(sRegistryDir, "Search", "BOOLEAN000", "")
+    LookupDialog.SearchFieldCombo.Value = GetSetting(sRegistryDir, "Search", "INDEX000", "")
+    LookupDialog.OperatorCombo.Value = GetSetting(sRegistryDir, "Search", "OPERATOR000", "")
+    LookupDialog.SearchValueBox.Value = GetSetting(sRegistryDir, "Search", "VALUE000", "")
+    
+    LookupDialog.SearchListBox.Clear
+    For i = 1 To iMax
+        LookupDialog.SearchListBox.AddItem ""
+        LookupDialog.SearchListBox.List(i - 1, 0) = GetSetting(sRegistryDir, "Search", "BOOLEAN" & Format(i, "000"), "")
+        LookupDialog.SearchListBox.List(i - 1, 1) = GetSetting(sRegistryDir, "Search", "INDEX" & Format(i, "000"), "")
+        LookupDialog.SearchListBox.List(i - 1, 2) = GetSetting(sRegistryDir, "Search", "OPERATOR" & Format(i, "000"), "")
+        LookupDialog.SearchListBox.List(i - 1, 3) = GetSetting(sRegistryDir, "Search", "VALUE" & Format(i, "000"), "")
+    Next i
+    If iMax > 0 Then
+        LookupDialog.BooleanCombo.Enabled = True
+    End If
+    PopulateBooleanCombo
+End Sub
+
+Sub SaveSearchParams()
+    ClearSavedSearchParams
+    
+    SaveSetting sRegistryDir, "Search", "BOOLEAN000", LookupDialog.BooleanCombo.Value
+    SaveSetting sRegistryDir, "Search", "INDEX000", LookupDialog.SearchFieldCombo.Value
+    SaveSetting sRegistryDir, "Search", "OPERATOR000", LookupDialog.OperatorCombo.Value
+    SaveSetting sRegistryDir, "Search", "VALUE000", LookupDialog.SearchValueBox.Value
+    
+    iCount = LookupDialog.SearchListBox.ListCount
+    
+    For i = 0 To iCount - 1
+        SaveSetting sRegistryDir, "Search", "BOOLEAN" & Format(i + 1, "000"), LookupDialog.SearchListBox.List(i, 0)
+        SaveSetting sRegistryDir, "Search", "INDEX" & Format(i + 1, "000"), LookupDialog.SearchListBox.List(i, 1)
+        SaveSetting sRegistryDir, "Search", "OPERATOR" & Format(i + 1, "000"), LookupDialog.SearchListBox.List(i, 2)
+        SaveSetting sRegistryDir, "Search", "VALUE" & Format(i + 1, "000"), LookupDialog.SearchListBox.List(i, 3)
+    Next i
+    
+    SaveSetting sRegistryDir, "Search", "_Max", iCount
+    
+    SaveSetting sRegistryDir, "Search", "_IgnoreHeader", LookupDialog.IgnoreHeaderCheckbox.Value
+    SaveSetting sRegistryDir, "Search", "_GenerateHeader", LookupDialog.GenerateHeaderCheckBox.Value
+    SaveSetting sRegistryDir, "Search", "_ValidateISXN", LookupDialog.ValidateCheckBox.Value
+    SaveSetting sRegistryDir, "Search", "_IncludeSuppressed", LookupDialog.IncludeSuppressed.Value
+    
+End Sub
+
 Function GetSourceRegIndex(sSource) As Integer
     GetSourceRegIndex = -1
     iURLsMax = GetSetting(sRegistryDir, "Sources", "MAX", 0)
@@ -442,7 +511,28 @@ Sub PopulateCombos()
     OtherSourcesDialog.OtherSourcesListBox.List = aOtherSources
 
     PopulateSourceDependentOptions
+    PopulateBooleanCombo
 
+End Sub
+
+Sub PopulateBooleanCombo()
+    If LookupDialog.SearchListBox.ListCount = 0 Or Not (bIsAlma Or bIsWorldCat) Then
+        LookupDialog.BooleanCombo.Clear
+        LookupDialog.BooleanCombo.Enabled = False
+    Else
+        If Catalog.bIsWorldCat And LookupDialog.SearchFieldCombo.Value = "Holdings Code(s)" Then
+            LookupDialog.BooleanCombo.Clear
+            LookupDialog.BooleanCombo.Enabled = False
+            LookupDialog.BooleanCombo.AddItem "IF"
+            LookupDialog.BooleanCombo.ListIndex = 0
+        ElseIf LookupDialog.BooleanCombo.ListCount <> 2 Then
+            LookupDialog.BooleanCombo.Enabled = True
+            LookupDialog.BooleanCombo.AddItem "AND"
+            LookupDialog.BooleanCombo.AddItem "OR"
+            LookupDialog.BooleanCombo.ListIndex = 0
+
+        End If
+    End If
 End Sub
 
 Sub PopulateSourceDependentOptions()
@@ -761,9 +851,6 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
         aSearchTerms(0, 0) = ""
         aSearchTerms(0, 1) = sSearchType
         aSearchTerms(0, 2) = LookupDialog.OperatorCombo.Value
-        If sSearchType = "alma.PermanentCallNumber" Then
-            aSearchTerms(0, 2) = "all"
-        End If
         aSearchTerms(0, 3) = sQuery1
     Else
         With LookupDialog.SearchListBox
@@ -807,20 +894,27 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
             Case "alma.barcode"
                 sQuery = Replace(sQuery, " ", "")
         End Select
-        Do While (InStr(1, sQuery, "||") > 0) Or (InStr(1, sQuery, "%7C%7C") > 0)
+        
+        sQuery = Replace(sQuery, "%7C", "|")
+        
+        Do While InStr(1, sQuery, "||") > 0
             sQuery = Replace(sQuery, "||", "|")
-            sQuery = Replace(sQuery, "%7C%7C", "%7C")
         Loop
         If Right(sQuery, 1) = "|" Then
             sQuery = Left(sQuery, Len(sQuery) - 1)
         End If
-        If Right(sQuery, 3) = "%7C" Then
-            sQuery = Left(sQuery, Len(sQuery) - 3)
-        End If
-        If InStr(1, sQuery, "|") Or InStr(1, sQuery, "%7C") Then
-            sQuery = Replace(sQuery, "|", "%22+OR+" & sIndex & "+" & sOperator & "+%22")
-            sQuery = Replace(sQuery, "%7C", "%22+OR+" & sIndex & "+" & sOperator & "+%22")
-            sURL = sURL & "(+" & sIndex & "+" & sOperator & "+%22" + EncodeURI(sQuery) + "%22+)"
+
+        If InStr(1, sQuery, "|") > 0 Then
+            sQueryString = ""
+            aTermList = Split(sQuery, "|")
+            For j = 0 To UBound(aTermList)
+                If sQueryString <> "" Then
+                    sQueryString = sQueryString & "%22+OR+" & sIndex & "+" & sOperator & "+%22"
+                End If
+                sQueryString = sQueryString + EncodeURI(aTermList(j))
+            Next j
+            'sQuery = Replace(sQuery, "|", """ OR " & sIndex & " " & sOperator & " """)
+            sURL = sURL & "(+" & sIndex & "+" & sOperator & "+%22" + sQueryString + "%22+)"
         Else
             If sOperator = "empty" Then
                 sURL = sURL & sIndex & "+==+%22%22"
@@ -1151,8 +1245,16 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
             sTerm = Left(sQuery, Len(sQuery) - 1)
         End If
         If InStr(1, sQuery, "|") Then
-            sQuery = "@or " & sIndex & " """ & Left(sQuery, InStr(1, sQuery, "|") - 1) & _
-                """ " & sIndex & " """ & Mid(sQuery, InStr(1, sQuery, "|") + 1) & """"
+            sSubTermList = ""
+            aSubTerms = Split(sQuery, "|")
+            For j = 0 To UBound(aSubTerms)
+                sSubTerm = aSubTerms(j)
+                If sSubTermList <> "" Then
+                    sSubTermList = "@or " & sSubTermList
+                End If
+                sSubTermList = sSubTermList & " " & sIndex & " " & " """ & sSubTerm & """"
+            Next j
+            sQuery = sSubTermList
         Else
             sQuery = sIndex & " """ & sQuery & """"
         End If
@@ -1312,27 +1414,27 @@ Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
     Dim sFormat As String
     sURL = ""
     
-    If LookupDialog.ValidateCheckBox.Value And Not bAdvancedSearch Then
-        If sSearchType = "ISBN" Then
-            Dim sISBN As String
-            sISBN = NormalizeISBN(sQuery1)
-            iVbarPos = InStr(1, sISBN, "|")
-            If iVbarPos > 0 Then
-                sISBN = Left(sISBN, iVbarPos - 1)
-            End If
-            If sISBN = "INVALID" Or sISBN <> GenerateCheckDigit(sISBN) Then
-                Lookup = "INVALID"
-                Exit Function
-            End If
-        ElseIf sSearchType = "ISSN" Then
-            Dim sISSN As String
-            sISSN = NormalizeISSN(sQuery1)
-            If sISSN = "INVALID" Or sISSN <> GenerateCheckDigit(sISSN) Then
-                Lookup = "INVALID"
-                Exit Function
-            End If
-        End If
-    End If
+    'If LookupDialog.ValidateCheckBox.Value And Not bAdvancedSearch Then
+    '    If sSearchType = "ISBN" Then
+    '        Dim sISBN As String
+    '        sISBN = NormalizeISBN(sQuery1)
+    '        iVbarPos = InStr(1, sISBN, "|")
+    '        If iVbarPos > 0 Then
+    '            sISBN = Left(sISBN, iVbarPos - 1)
+    '        End If
+    '        If sISBN = "INVALID" Or sISBN <> GenerateCheckDigit(sISBN) Then
+    '            Lookup = "INVALID"
+    '            Exit Function
+    '        End If
+    '    ElseIf sSearchType = "ISSN" Then
+    '        Dim sISSN As String
+    '        sISSN = NormalizeISSN(sQuery1)
+    '        If sISSN = "INVALID" Or sISSN <> GenerateCheckDigit(sISSN) Then
+    '            Lookup = "INVALID"
+    '            Exit Function
+    '        End If
+    '    End If
+    'End If
       
     If sCatalogURL = "source:recap" Then
         Select Case sSearchType
@@ -1995,25 +2097,55 @@ Function NormalizeISBN(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
-    sQuery = Replace(sQuery, " ", "")
-    sQuery = Replace(sQuery, "-", "")
-    oRegEx.Pattern = "[0-9]{13}"
-    Set oMatch = oRegEx.Execute(sQuery)
-    If oMatch.count = 0 Then
-        oRegEx.Pattern = "[0-9]{9}([0-9]|X)"
-        Set oMatch = oRegEx.Execute(sQuery)
+    sISBNList = ""
+    
+    Dim aISBNList() As String
+    aISBNList = Split(Replace(sQuery, ";", "|"), "|")
+    
+    For i = 0 To UBound(aISBNList)
+        Dim sISBN As String
+        sISBN = aISBNList(i)
+        sQuery = Replace(sISBN, " ", "")
+        sQuery = Replace(sISBN, "-", "")
+        oRegEx.Pattern = "[0-9]{13}"
+        Set oMatch = oRegEx.Execute(sISBN)
         If oMatch.count = 0 Then
-            NormalizeISBN = ""
+            oRegEx.Pattern = "[0-9]{9}([0-9]|X)"
+            Set oMatch = oRegEx.Execute(sISBN)
+            If oMatch.count > 0 Then
+                sISBN = oMatch.Item(0)
+            End If
         Else
-            NormalizeISBN = oMatch.Item(0)
+            sISBN = oMatch.Item(0)
         End If
-    Else
-        NormalizeISBN = oMatch.Item(0)
-    End If
-    If LookupDialog.ValidateCheckBox.Value Then
-        NormalizeISBN = GenerateCheckDigit(NormalizeISBN)
-        NormalizeISBN = GetOtherISBN(NormalizeISBN)
-    End If
+        If LookupDialog.ValidateCheckBox.Value Then
+            sISBN = GenerateCheckDigit(sISBN)
+            sISBN = GetOtherISBN(sISBN)
+        End If
+        If sISBN = "INVALID" Then
+            NormalizeISBN = "INVALID"
+            Exit Function
+        End If
+        If sISBN <> "" Then
+            If sISBNList <> "" Then
+                sISBNList = sISBNList & "|"
+            End If
+            sISBNList = sISBNList & sISBN
+        End If
+    Next i
+    
+    aISBNList = Split(sISBNList, "|")
+    sISBNList = ""
+    For i = 0 To UBound(aISBNList)
+        sISBN = aISBNList(i)
+        If InStr(1, sISBNList, sISBN) = 0 Then
+            If sISBNList <> "" Then
+                sISBNList = sISBNList & "|"
+            End If
+            sISBNList = sISBNList & sISBN
+        End If
+    Next i
+    NormalizeISBN = sISBNList
 End Function
 
 Function GetOtherISBN(sISBN As String) As String
@@ -2057,6 +2189,7 @@ Function GetOtherISBN(sISBN As String) As String
 End Function
 
 Function GenerateCheckDigit(sISXN As String) As String
+    On Error GoTo Invalid
     iChecksum = 0
     If Len(sISXN) <> 8 And Len(sISXN) <> 10 And Len(sISXN) <> 13 Then
         GenerateCheckDigit = "INVALID"
@@ -2108,7 +2241,9 @@ Function GenerateCheckDigit(sISXN As String) As String
         GenerateCheckDigit = "INVALID"
     End If
     If GenerateCheckDigit <> sISXN Then
+Invalid:
         GenerateCheckDigit = "INVALID"
+        On Error GoTo 0
     End If
 End Function
 
@@ -2118,21 +2253,32 @@ Function NormalizeDate(sQuery As String, bStart As Boolean) As String
         .Global = True
         .IgnoreCase = True
     End With
-    oRegEx.Pattern = "[^0-9]"
-    sQuery = oRegEx.Replace(sQuery, "")
-    If Len(sQuery) < 4 Then
-        sQuery = "FALSE"
-    Else
-        If bStart Then
-            sQuery = Left(sQuery, 4)
-        Else
-            sQuery = Right(sQuery, 4)
+    
+    sDateList = ""
+        
+    Dim aDateList() As String
+    aDateList = Split(Replace(sQuery, ";", "|"), "|")
+    
+    For i = 0 To UBound(aDateList)
+        Dim sDate As String
+        sDate = aDateList(i)
+        oRegEx.Pattern = "[^0-9]"
+        sDate = oRegEx.Replace(sDate, "")
+        If Len(sDate) >= 4 Then
+            If bStart Then
+                sDate = Left(sDate, 4)
+            Else
+                sDate = Right(sDate, 4)
+            End If
         End If
-    End If
-    If Len(sQuery) < 4 Then
-        sQuery = "FALSE"
-    End If
-    NormalizeDate = sQuery
+        If Len(sDate) >= 4 Then
+            If sDateList <> "" Then
+                sDateList = sDateList & "|"
+            End If
+            sDateList = sDateList & sDate
+        End If
+    Next i
+    NormalizeDate = sDateList
 End Function
 
 Function NormalizeOCLC(sQuery As String) As String
@@ -2141,17 +2287,30 @@ Function NormalizeOCLC(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
-    sQuery = Replace(sQuery, " ", "")
-    oRegEx.Pattern = "^[^0-9]*"
-    sQuery = oRegEx.Replace(sQuery, "")
-    oRegEx.Pattern = "[^0-9].*$"
-    sQuery = oRegEx.Replace(sQuery, "")
-    oRegEx.Pattern = "^0*"
-    sQuery = oRegEx.Replace(sQuery, "")
-    If sQuery = "" Then
-        sQuery = "FALSE"
-    End If
-    NormalizeOCLC = sQuery
+    
+    sOCLCList = ""
+    
+    Dim aOCLCList() As String
+    aOCLCList = Split(Replace(sQuery, ";", "|"), "|")
+    
+    For i = 0 To UBound(aOCLCList)
+        Dim sOCLC As String
+        sOCLC = aOCLCList(i)
+        sOCLC = Replace(sOCLC, " ", "")
+        oRegEx.Pattern = "^[^0-9]*"
+        sOCLC = oRegEx.Replace(sOCLC, "")
+        oRegEx.Pattern = "[^0-9].*$"
+        sOCLC = oRegEx.Replace(sOCLC, "")
+        oRegEx.Pattern = "^0*"
+        sOCLC = oRegEx.Replace(sOCLC, "")
+        If sOCLC <> "" Then
+            If sOCLCList <> "" Then
+                sOCLCList = sOCLCList & "|"
+            End If
+            sOCLCList = sOCLCList & sOCLC
+        End If
+    Next i
+    NormalizeOCLC = sOCLCList
 End Function
 
 Function NormalizeISSN(sQuery As String) As String
@@ -2160,18 +2319,38 @@ Function NormalizeISSN(sQuery As String) As String
         .Global = True
         .IgnoreCase = True
     End With
-    sQuery = Replace(sQuery, "-", "")
-    sQuery = Replace(sQuery, " ", "")
-    oRegEx.Pattern = "[0-9]{7}([0-9]|X)"
-    Set oMatch = oRegEx.Execute(sQuery)
-    If oMatch.count = 0 Then
-        NormalizeISSN = ""
-    Else
-        NormalizeISSN = Left(sQuery, 8)
-    End If
-    If LookupDialog.ValidateCheckBox.Value Then
-        NormalizeISSN = GenerateCheckDigit(NormalizeISSN)
-    End If
+    
+    sISSNList = ""
+    
+    Dim aISSNList() As String
+    aISSNList = Split(Replace(sQuery, ";", "|"), "|")
+    
+    For i = 0 To UBound(aISSNList)
+        Dim sISSN As String
+        sISSN = aISSNList(i)
+        sISSN = Replace(sISSN, "-", "")
+        sISSN = Replace(sISSN, " ", "")
+        oRegEx.Pattern = "[0-9]{7}([0-9]|X)"
+        Set oMatch = oRegEx.Execute(sISSN)
+        If oMatch.count = 0 Then
+            sISSN = ""
+        Else
+            sISSN = Left(sISSN, 8)
+        End If
+        If LookupDialog.ValidateCheckBox.Value Then
+            If (GenerateCheckDigit(sISSN) = "INVALID") Then
+                NormalizeISSN = "INVALID"
+                Exit Function
+            End If
+        End If
+        If sISSN <> "" Then
+            If sISSNList <> "" Then
+                sISSNList = sISSNList & "|"
+            End If
+            sISSNList = sISSNList & sISSN
+        End If
+    Next i
+    NormalizeISSN = sISSNList
 End Function
 
 Public Function HtmlDecode(StringToDecode As Variant) As String
