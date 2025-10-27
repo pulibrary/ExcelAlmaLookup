@@ -152,6 +152,8 @@ Note that the "Field Name" drop-down only has a few different values, but one ca
 
 (The "Relation" menu also may offer a few options for types of comparisons.  Note that "=" is a phrase search within the field, whereas "==" is an exact match of the entire field.  Numeric fields like dates also offer "<" (greater than), ">" (less than), etc.  Also, after adding the first search field, the leftmost menu will give the option of AND or OR for joining the search conditions.  OR could be used, for example, to search for either a title OR a uniform title.)
 
+The AND operator takes precendence over OR, e.g. "X AND Y OR Z" = "(X AND Y) OR Z".  However, if a cell contains multiple values separated by the semicolon or vertical bar characters, the search will retrieve all records with any of those values.  For example, ("TITLE" AND "ISBN1; ISBN2") = "TITLE" AND ("ISBN1" OR "ISBN2").
+
 Note too that the "Value" field can be either a column letter (enclosed in double brackets) or a fixed value.  The example below shows how to search for all records where the title matches column H and the material type is MU (music).
 
 <img src='./img/beta3.jpg'>
@@ -159,7 +161,7 @@ Note too that the "Value" field can be either a column letter (enclosed in doubl
 The bottom part of the dialog (result types and field sets) functions in the same way as the previous version of the plugin.  See the main documentation above for details. 
 
 One can also perform multi-index searches in WorldCat.  The search can be constructed in a similar way to Alma searches, with the following differences:
-- In the "Field Name" drop-down, there is an option "Holdings Code9s)".  This allows you to filter results to only include records with the holdings code specified in the "Value" field.  One can also set "Value" to a list of holdings codes separated by the vertical bar | character.  In this case, a record will be included if it is held by *any* institution in the list.
+- In the "Field Name" drop-down, there is an option "Holdings Code(s)".  This allows you to filter results to only include records with the holdings code specified in the "Value" field.  One can also set "Value" to a list of holdings codes separated by the vertical bar | character.  In this case, a record will be included if it is held by *any* institution in the list.
 - The "Field Name" drop-down also has an option "Other fields...", which will display a list of all fields searchable in the WorldCat Z39.50 service.  (The number next to each index is the "use atttribute" value of that index, though this is not needed to contruct the search.)  See the following documentation from OCLC for details about which MARC fields correspond to each of these indexes:
 https://help.oclc.org/Metadata_Services/Z3950_Cataloging/Use_Z39.50_Cataloging/Search_tips_for_OCLC_Z39.50_Cataloging .
 - There is not currently an option to choose a "relation" for each part of the search, such as =, <, >, etc.  Phrase searching is used for titles, and word searching for other other indexes. However, one can manually enter a list of Bib-1 attributes in the "Field Name" box in order to override these defaults.  For example, the following string specifies an author phrase search: `@attr 4=1 @attr 1=1003`. See the following documentation from LOC for more details about these attributes: https://www.loc.gov/z3950/agency/defns/bib1.html .
