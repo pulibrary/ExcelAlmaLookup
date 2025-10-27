@@ -248,6 +248,7 @@ Sub LookupInterface(control As IRibbonControl)
     RedrawButtons
     PopulateCombos
     LoadSavedSearchParams
+    LoadSavedResultList
     
     
     sFileName = ActiveWorkbook.Name
@@ -403,6 +404,30 @@ Sub DeleteFieldSet(sSetName)
     Next i
 End Sub
 
+Sub ClearSavedResultList()
+    On Error Resume Next
+    If IsArray(GetAllSettings(sRegistryDir, "Results")) Then
+        DeleteSetting sRegistryDir, "Results"
+    End If
+    On Error GoTo 0
+End Sub
+
+
+Sub LoadSavedResultList()
+    On Error Resume Next
+    If Not IsArray(GetAllSettings(sRegistryDir, "Results")) Then
+        Exit Sub
+    End If
+    On Error GoTo 0
+        
+    iMax = GetSetting(sRegistryDir, "Results", "MAX")
+    LookupDialog.ResultTypeList.Clear
+    For i = 0 To iMax
+        LookupDialog.ResultTypeList.AddItem GetSetting(sRegistryDir, "Results", "RESULT" & Format(i, "000"), "")
+    Next i
+End Sub
+
+
 Sub ClearSavedSearchParams()
     On Error Resume Next
     If IsArray(GetAllSettings(sRegistryDir, "Search")) Then
@@ -442,6 +467,15 @@ Sub LoadSavedSearchParams()
         LookupDialog.BooleanCombo.Enabled = True
     End If
     PopulateBooleanCombo
+End Sub
+
+Sub SaveResultList()
+    ClearSavedResultList
+    iMax = LookupDialog.ResultTypeList.ListCount - 1
+    SaveSetting sRegistryDir, "Results", "MAX", iMax
+    For i = 0 To iMax
+        SaveSetting sRegistryDir, "Results", "RESULT" & Format(i, "000"), LookupDialog.ResultTypeList.List(i)
+    Next i
 End Sub
 
 Sub SaveSearchParams()
@@ -600,6 +634,7 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.SearchValueBox.Enabled = True
         LookupDialog.SearchListBox.Clear
         LookupDialog.SearchListBox.Enabled = True
+        LookupDialog.ResultTypeList.Clear
         LookupDialog.AddSearchButton.Enabled = True
         PopulateOperatorCombo
     ElseIf bIsWorldCat Then
@@ -620,6 +655,7 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.SearchValueBox.Enabled = True
         LookupDialog.SearchListBox.Clear
         LookupDialog.SearchListBox.Enabled = True
+        LookupDialog.ResultTypeList.Clear
         LookupDialog.AddSearchButton.Enabled = True
         PopulateOperatorCombo
     Else 'Other non-Alma sources
@@ -644,6 +680,7 @@ Sub PopulateSourceDependentOptions()
         LookupDialog.SearchValueBox.Enabled = False
         LookupDialog.SearchListBox.Clear
         LookupDialog.SearchListBox.Enabled = False
+        LookupDialog.ResultTypeList.Clear
         LookupDialog.AddSearchButton.Enabled = False
         LookupDialog.RemoveSearchButton.Enabled = False
         sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
@@ -793,6 +830,7 @@ Function ColumnLetterConvert(sInput As String) As String
         ColumnLetterConvert = "A"
     End If
 End Function
+
 
 Function EncodeURI(ByVal sStr As String) As String
 
@@ -2105,8 +2143,8 @@ Function NormalizeISBN(sQuery As String) As String
     For i = 0 To UBound(aISBNList)
         Dim sISBN As String
         sISBN = aISBNList(i)
-        sQuery = Replace(sISBN, " ", "")
-        sQuery = Replace(sISBN, "-", "")
+        sISBN = Replace(sISBN, " ", "")
+        sISBN = Replace(sISBN, "-", "")
         oRegEx.Pattern = "[0-9]{13}"
         Set oMatch = oRegEx.Execute(sISBN)
         If oMatch.count = 0 Then

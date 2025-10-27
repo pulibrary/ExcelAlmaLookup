@@ -1,5 +1,5 @@
 Attribute VB_Name = "UserPassForm"
-Attribute VB_Base = "0{9AE0C57C-9D21-49B7-9230-58C4F260E8D5}{05282309-3FB6-4D33-8EB0-708B185BE850}"
+Attribute VB_Base = "0{D6FD280A-B5FA-485E-BFB4-61EB5C5BDB69}{7CBD0757-8D85-4601-B0EF-89241B2DD7A2}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True

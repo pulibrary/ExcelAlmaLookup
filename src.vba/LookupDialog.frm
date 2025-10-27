@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{BD1A9CDD-F477-4117-8083-F8816D83B7DB}{D7371FF5-EAA1-4BE7-9926-8FD0BD6B5CA2}"
+Attribute VB_Base = "0{CED3FA10-209B-4E20-B9F9-4370AF49E4FF}{EDF78585-44A8-4915-94D2-3AE079201BEC}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -45,6 +45,7 @@ End Sub
 
 Private Sub CancelButton_Click()
     Catalog.SaveSearchParams
+    Catalog.SaveResultList
     LookupDialog.Hide
     End
 End Sub
@@ -214,6 +215,7 @@ Private Sub OKButton_Click()
     
     Catalog.AddURLtoRegistry (sCatalogURL)
     Catalog.SaveSearchParams
+    Catalog.SaveResultList
     iResultColumn = LookupDialog.ResultColumnSpinner.Value
     If LookupDialog.ResultTypeList.ListCount = 0 Then
         AddResultButton_Click
@@ -485,7 +487,7 @@ Private Sub SearchFieldCombo_Change()
     If sField = "Other fields..." Then
         AdditionalFieldsDialog.FilterBox.Value = ""
         If Catalog.bIsAlma Then
-            If IsNull(Catalog.aExplainFields) Then
+            If IsNull(Catalog.aExplainFields) Or IsEmpty(Catalog.aExplainFields) Then
                 Catalog.aExplainFields = Catalog.GetAllFields()
             End If
             If Not IsNull(Catalog.aExplainFields) Then
