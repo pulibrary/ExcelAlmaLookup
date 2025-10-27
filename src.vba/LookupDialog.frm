@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{CED3FA10-209B-4E20-B9F9-4370AF49E4FF}{EDF78585-44A8-4915-94D2-3AE079201BEC}"
+Attribute VB_Base = "0{04808E4B-AB1C-4B1B-8880-7FF4BC464C33}{5CBF2BAE-72D0-444F-BCA4-C1103231D738}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -202,6 +202,10 @@ Private Sub OKButton_Click()
         If IsNull(aFieldMap) Then
             Exit Sub
         End If
+    End If
+    
+    If Not ValidateMaxResults Then
+        Exit Sub
     End If
     
     Dim sCatalogURL As String

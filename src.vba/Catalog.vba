@@ -20,7 +20,7 @@ Global aOtherSources As Variant
 Global sFileName As String
 Global sSheetName As String
 
-Public Const iMaximumRecords = 50
+Dim iMaximumRecords As Integer
 Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
@@ -421,6 +421,11 @@ Sub LoadSavedResultList()
     On Error GoTo 0
         
     iMax = GetSetting(sRegistryDir, "Results", "MAX")
+    
+    iMaxResults = GetSetting(sRegistryDir, "Results", "MAXRECS", 50)
+    
+    LookupDialog.MaxResultsBox.Value = iMaxResults
+    
     LookupDialog.ResultTypeList.Clear
     For i = 0 To iMax
         LookupDialog.ResultTypeList.AddItem GetSetting(sRegistryDir, "Results", "RESULT" & Format(i, "000"), "")
@@ -473,6 +478,7 @@ Sub SaveResultList()
     ClearSavedResultList
     iMax = LookupDialog.ResultTypeList.ListCount - 1
     SaveSetting sRegistryDir, "Results", "MAX", iMax
+    SaveSetting sRegistryDir, "Results", "MAXRECS", LookupDialog.MaxResultsBox.Value
     For i = 0 To iMax
         SaveSetting sRegistryDir, "Results", "RESULT" & Format(i, "000"), LookupDialog.ResultTypeList.List(i)
     Next i
@@ -2403,4 +2409,22 @@ Public Function HtmlDecode(StringToDecode As Variant) As String
     Set E = oMSHTML.createElement("T")
     E.innerHTML = StringToDecode
     HtmlDecode = E.innerText
+End Function
+
+Public Function ValidateMaxResults()
+    sValue = LookupDialog.MaxResultsBox.Value
+    If Not IsNumeric(sValue) Or (CInt(sValue) <> sValue) Or (Int(sValue) <= 0) Then
+        MsgBox ("Max records must be a value greater than zero")
+        LookupDialog.MaxResultsBox.Value = "50"
+        ValidateMaxResults = False
+        Exit Function
+    End If
+    If bIsAlma And Int(sValue) > 50 Then
+        MsgBox ("Max records must be <= 50 for Alma catalogs")
+        LookupDialog.MaxResultsBox.Value = "50"
+        ValidateMaxResults = False
+        Exit Function
+    End If
+    iMaximumRecords = Int(sValue)
+    ValidateMaxResults = True
 End Function
