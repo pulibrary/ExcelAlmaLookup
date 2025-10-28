@@ -425,7 +425,7 @@ Sub LoadSavedResultList()
     iMaxResults = GetSetting(sRegistryDir, "Results", "MAXRECS", 50)
     
     LookupDialog.MaxResultsBox.Value = iMaxResults
-    
+    LookupDialog.IncludeExtrasCheckBox.Value = GetSetting(sRegistryDir, "Results", "IncludeExtras", False)
     LookupDialog.ResultTypeCombo.Value = GetSetting(sRegistryDir, "Results", "RESULT000", "")
     
     LookupDialog.ResultTypeList.Clear
@@ -479,9 +479,13 @@ End Sub
 Sub SaveResultList()
     ClearSavedResultList
     iMax = LookupDialog.ResultTypeList.ListCount
+    If iMax < 0 Then
+        iMax = 0
+    End If
     SaveSetting sRegistryDir, "Results", "MAX", iMax
     SaveSetting sRegistryDir, "Results", "MAXRECS", LookupDialog.MaxResultsBox.Value
     SaveSetting sRegistryDir, "Results", "RESULT000", LookupDialog.ResultTypeCombo.Value
+    SaveSetting sRegistryDir, "Results", "IncludeExtras", LookupDialog.IncludeExtrasCheckBox.Value
     For i = 1 To iMax
         SaveSetting sRegistryDir, "Results", "RESULT" & Format(i, "000"), LookupDialog.ResultTypeList.List(i - 1)
     Next i
