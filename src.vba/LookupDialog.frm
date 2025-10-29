@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{1CA84B94-58E4-4922-ACF0-B56F3382DC41}{C381EF81-4540-4DFF-8357-678483017CD5}"
+Attribute VB_Base = "0{0D2CFFAA-C931-4B39-B145-258DA0E02F22}{CB8BEEC5-BEE4-4D5D-8F1A-01440DB93838}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -285,7 +285,9 @@ Private Sub OKButton_Click()
                     For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
                         Dim stype As String
                         stype = LookupDialog.ResultTypeList.List(j)
-                        stype = Replace(stype, "*", "")
+                        While Left(stype, 1) = "*"
+                            stype = Mid(stype, 2)
+                        Wend
                         If i = iStartIndex And bIgnoreHeader Then
                             sResult = ""
                             If LookupDialog.GenerateHeaderCheckBox.Value = True Then

@@ -2030,6 +2030,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                             bFilterMatch = False
                             If Left(sResultFilter, 1) = "/" And Right(sResultFilter, 1) = "/" Then
                                 sResultRegex = Mid(sResultFilter, 2, Len(sResultFilter) - 2)
+                                Debug.Print sResultRegex
                                 oRegEx.Pattern = sResultRegex
                                 bFilterMatch = oRegEx.Test(aResults(j))
                             Else
