@@ -2027,7 +2027,16 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                          sRecordFiltered = ""
                          aResults = Split(sRecord, ChrW(166), -1, 0)
                          For j = 0 To UBound(aResults)
-                            If InStr(1, aResults(j), sResultFilter) > 0 Then
+                            bFilterMatch = False
+                            If Left(sResultFilter, 1) = "/" And Right(sResultFilter, 1) = "/" Then
+                                sResultRegex = Mid(sResultFilter, 2, Len(sResultFilter) - 2)
+                                oRegEx.Pattern = sResultRegex
+                                bFilterMatch = oRegEx.Test(aResults(j))
+                            Else
+                                bFilterMatch = (InStr(1, aResults(j), sResultFilter) > 0)
+                            End If
+                         
+                            If bFilterMatch Then
                                 If sRecordFiltered <> "" Then
                                     sRecordFiltered = sRecordFiltered & ChrW(166)
                                 End If
