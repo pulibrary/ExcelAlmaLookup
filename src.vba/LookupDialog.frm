@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{DD770B28-B18D-4D26-B0EA-D99BE4D6B9C7}{A915B542-C5DB-469C-947A-CA1CCC7536B4}"
+Attribute VB_Base = "0{23B044B9-C881-4301-85CE-AF75E49DAD49}{A915B542-C5DB-469C-947A-CA1CCC7536B4}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -68,6 +68,7 @@ Private Sub CatalogURLBox_Change()
             End If
         End If
         Catalog.PopulateSourceDependentOptions
+        Catalog.PopulateBooleanCombo
     End If
 End Sub
 
@@ -434,7 +435,7 @@ Private Sub RemoveSearchButton_Click()
             .List(0, 0) = ""
         End If
     End With
-    PopulateBooleanCombo
+    Catalog.PopulateBooleanCombo
 End Sub
 
 Private Sub RemoveURLButton_Click()

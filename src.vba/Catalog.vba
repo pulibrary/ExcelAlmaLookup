@@ -235,7 +235,6 @@ Function GetLastPopulatedRow(oRange As Range) As Integer
     Else
         iLastSourceRow = oRange.Range("A999999").EntireRow.End(xlUp).Row
     End If
-    Debug.Print iLastSourceRow
     If iFirstSourceRow + oRange.Rows.Count - 1 < iLastSourceRow Then
         iLastSourceRow = iFirstSourceRow + oRange.Rows.Count - 1
     End If
@@ -583,12 +582,11 @@ Sub PopulateCombos()
 End Sub
 
 Sub PopulateBooleanCombo()
+    LookupDialog.BooleanCombo.Clear
     If LookupDialog.SearchListBox.ListCount = 0 Or Not (bIsAlma Or bIsWorldCat) Then
-        LookupDialog.BooleanCombo.Clear
         LookupDialog.BooleanCombo.Enabled = False
     Else
         If Catalog.bIsWorldCat And LookupDialog.SearchFieldCombo.Value = "Holdings Code(s)" Then
-            LookupDialog.BooleanCombo.Clear
             LookupDialog.BooleanCombo.Enabled = False
             LookupDialog.BooleanCombo.AddItem "IF"
             LookupDialog.BooleanCombo.ListIndex = 0
@@ -597,7 +595,6 @@ Sub PopulateBooleanCombo()
             LookupDialog.BooleanCombo.AddItem "AND"
             LookupDialog.BooleanCombo.AddItem "OR"
             LookupDialog.BooleanCombo.ListIndex = 0
-
         End If
     End If
 End Sub
