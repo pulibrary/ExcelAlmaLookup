@@ -582,15 +582,17 @@ Sub PopulateCombos()
 End Sub
 
 Sub PopulateBooleanCombo()
-    LookupDialog.BooleanCombo.Clear
     If LookupDialog.SearchListBox.ListCount = 0 Or Not (bIsAlma Or bIsWorldCat) Then
+        LookupDialog.BooleanCombo.Clear
         LookupDialog.BooleanCombo.Enabled = False
     Else
         If Catalog.bIsWorldCat And LookupDialog.SearchFieldCombo.Value = "Holdings Code(s)" Then
+            LookupDialog.BooleanCombo.Clear
             LookupDialog.BooleanCombo.Enabled = False
             LookupDialog.BooleanCombo.AddItem "IF"
             LookupDialog.BooleanCombo.ListIndex = 0
         ElseIf LookupDialog.BooleanCombo.ListCount <> 2 Then
+            LookupDialog.BooleanCombo.Clear
             LookupDialog.BooleanCombo.Enabled = True
             LookupDialog.BooleanCombo.AddItem "AND"
             LookupDialog.BooleanCombo.AddItem "OR"
