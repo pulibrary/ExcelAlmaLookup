@@ -1,17 +1,9 @@
 # Excel Alma Lookup
-An Alma batch-search plugin designed to be used within Excel. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. Selected non-Alma catalogs can also be searched, such as WorldCat, Library of Congress, ReCAP, and BorrowDirect.
-
-**NEW!** A beta version of the plugin (v1.4.0) is now available! The main feature being added is multi-index searching.  If you are interested in trying the beta, see the section [Beta version](https://github.com/pulibrary/ExcelAlmaLookup?tab=readme-ov-file#beta-version-v140-with-multi-index-searching) at the end of this documentation.
-
-## System Requirements
-- Microsoft Windows version 7 or higher
-- Microsoft Excel version 2007 or higher
+An Alma batch-search plugin designed to be used within Microsoft Excel for Windows. When integrated with your local Alma instance, the tool can perform searches by keyword, call number, title, ISBN, ISSN, MMS ID and many other fields based on the spreadsheet data. Selected non-Alma catalogs can also be searched, such as WorldCat, Library of Congress, ReCAP, and BorrowDirect.
 
 ## Installation
 
-Download the installer here:
-
-<a href="https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe">CatalogLookupInstaller.exe</a>
+[Download here](https://github.com/pulibrary/ExcelAlmaLookup/releases/latest/download/CatalogLookupInstaller.exe)
 
 Simply run the installer (and be sure to quit Excel before doing so).  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Catalog”. 
 
@@ -42,18 +34,33 @@ After entering the URL, click “Add URL to List” to save the URL for future u
 
 To search a non-Alma catalog (such as WorldCat), click the "Non-Alma Sources" button.  A list of available sources will appear.  After selecting a source, it will appear in the drop-down menu along with your Alma URLs.
 
-If your SRU integration requires a username and password, you will be prompted for these.  (These are likely different than the personal credentials you use to log into Alma.  Check with your catalog administrator.)   If searching WorldCat, you will be prompted to enter your authorization number and password.  You can save these credentials by checking the "Remember these credentials" box in the login prompt, or delete the saved credentials by clicking the "Clear Credentials" button while the URL is selected. 
+If your SRU integration requires a username and password, you will be prompted for these.  (These are likely different than the personal credentials you use to log into Alma.  Check with your catalog administrator.)   If searching WorldCat, you will be prompted to enter your authorization number and password. (These are the same credentials used to log into OCLC Connexion Client.)  You can save these credentials by checking the "Remember these credentials" box in the login prompt, or delete the saved credentials by clicking the "Clear Credentials" button while the URL is selected. 
 
 ## Setting Up the Query
-Open an Excel spreadsheet and highlight the cells containing the data you want to search for in Alma.  You can highlight an entire column, or just specific cells, but all the values should be contained in the same column.  After highlighting the desired cells, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
+Open an Excel spreadsheet and highlight the columns/rows containing the data you want to search for in Alma.  (You can highlight specific cells, entire rows/columns, or the entire spreadsheet.)  Then, click the “Look Up in Local Catalog” button.  The following dialog box will appear:
 
 <img src='./img/dialog.jpg'>
 
-Below is an explanation of the fields in this dialog:
+See the "Configuration" section above regarding what value to use in the "Base URL for Alma SRU" field.
 
-**Base URL for Alma SRU**:  See the "Configuration" section above.  
+### Building the Search 
 
-**Select a range of cells to look up**: This field indicates which cells contain the values you want to search for.  If you selected a range of cells before clicking the button, then this field will already contain the appropriate value.  However, it is possible to select a new range of cells by clicking the button to the right of this field.  Please note that hidden cells in the indicated range will not be included in the search.
+A search will be performed for each visible selected row in the spreadsheet.  The search parameters can be set in the "Search" section of the dialog as described below: 
+- "Field name" is the index to search in (ISBN, MMS ID, etc).  Select "Other fields..." from the this menu to see a full list of available indexes.  When you select one, its field ID will appear in the menu (e.g. "alma.date_of_publication")  You can also enter the field ID directly once you know it.
+- "Value" is the value to search for. If "Value" is a column letter enclosed in double-brackets (e.g. "[[A]]"), then that column is used as the source of the search value for each row.  "Value" can also be set to a fixed value, which can be useful for filtering the results.  The example above includes the parameter "alma.mms_material_type = BK" (i.e. Material Type is "Book").  "Value" will automatically be set to the leftmost column in the selected range.
+-  The "Relation" menu will offer options for a few types of relations based on the search index selected.  Note that "=" is a phrase search within the field, whereas "==" is an exact match of the entire field. Numeric fields like dates may also offer "<" (greater than), ">" (less than), etc.
+- If only searching a single index, simply set these three dropdown menus appropriately.  Multi-index searches can be constructed by setting these options and clicking the "Add" button to add them to the list below.  (The "Remove" button removes the selected paramters.)  After you add the first parameter, the leftmost menu will allow you to select "AND" or "OR" to build a Boolean query.
+- In multi-index searches, the AND operator takes precendence over OR.  So, the example search above would be intepreted as `(Title = Column A AND Publication Date = Column C AND Material Type = "Book") OR (ISBN = Column B)`. However, if a cell or search value contains multiple values separated by the semicolon or vertical bar characters, the search will retrieve all records with any of those values. For example, `Title = "ABC" AND OCLC No. = "1234; 5678"` would be interpreted as `Title = "ABC" AND (OCLC No. = "1234" OR OCLC No. = "5678")`.
+
+The above applies to Alma searches.  Other sources may not offer as many options.  However, please note the following when searching in WorldCat:
+ In the "Field Name" drop-down, there is an option "Holdings Code(s)".  This allows you to filter results to only include records with the holdings code specified in the "Value" field.  One can also set "Value" to a list of holdings codes separated by the vertical bar | character (e.g. "PUL|ZCU").  In this case, a record will be included if it is held by *any* institution in the list. Also note that rather than a boolean operator, the Holdings Code(s) index is preceded by "IF", since this is a filter applied to the search results, not a parameter in the search itself. 
+- The "Field Name" drop-down also has an option "Other fields...", which will display a list of all fields searchable in the WorldCat Z39.50 service.  (The number next to each index is the "use atttribute" value of that index, though this is not needed to contruct the search.)  See the following documentation from OCLC for details about which MARC fields correspond to each of these indexes:
+https://help.oclc.org/Metadata_Services/Z3950_Cataloging/Use_Z39.50_Cataloging/Search_tips_for_OCLC_Z39.50_Cataloging .
+- There is not currently an option to choose a "relation" for each part of the search, such as =, <, >, etc.  Phrase searching is used for titles, and word searching for other other indexes. However, one can manually enter a list of Bib-1 attributes in the "Field Name" box in order to override these defaults.  For example, the following string specifies an author phrase search: `@attr 4=1 @attr 1=1003`. See the following documentation from LOC for more details about these attributes: https://www.loc.gov/z3950/agency/defns/bib1.html .
+
+The following search options are also available:
+
+**Rows to look up**: This indicates which rows were selected before launching the tool.  If an entire column or columns were selected, the last row containing data will automatically be detected and its row number will be shown here.
 
 **Ignore First Row (Header)**: If checked, the first cell in the selected range will not be searched.  You should check this if the first row is a header.
 
@@ -63,26 +70,25 @@ Below is an explanation of the fields in this dialog:
 
 **Include suppressed records**: If checked, then suppressed records will be included in the search results.
 
-**Leftmost result column**: The column that will be populated with the first result type.  If more than one result type is selected, the others will be put in consecutive columns to the right of the first.  By default, the first empty column to the right of the visible spreadsheet data is selected.  Use the arrow buttons to select a different column.  If the selected column contains data, it will be overwritten (except for hidden cells). Search results will be placed in the same rows as the corresponding search values.
+### Extracting fields for the report
 
-**Field to search**: This indicates what kind of values are in the selected cells (e.g. ISBN, ISSN, Call Number, Title, or MMS ID).  If an ISBN search is done, then spaces, dashes and parenthetical comments (e.g. “(paperback)”) are removed from the value before searching.  Currently, the title search does not strip stopwords or do anything else to “clean up” the titles before searching.  Thus, title searching will not be as accurate as the other search types.  Also, please note that the search term will be treated as a phrase and enclosed in quotes, even if it contains multiple words.
-
-Besides the search keys in the drop-down list, you can enter any search index supported by the local Alma instance.  Clicking the “Additional Fields” button will display a full list of such keys.  Selecting an index from this list will enter the appropriate code in “Field to Search”.  Note that for non-Alma sources, only a limited number of search types are available, and the "Additional Fields" button is not enabled.
-
-**Result types**:   The type of data to retrieve from the records and output in the spreadsheet.  Result types can be specified in a number of different ways: 
+The "Results" section of the dialog is used to indicate what should be extracted from the records that are found.  The "Result type(s)" drop-down menu and the list box below show what fields will be included.  These can be specified in a few different ways:
 - Selecting “True/False” will populate the result column with TRUE and FALSE values based on whether the search values were found in the catalog.  
 - Other result types, such as call numbers and location codes, may be selected from the dropdown list.  Result types prefixed with a single asterisk are taken from the availability fields.  Those with a double asterisk are from the ISO 20775 Holdings data.  Your catalog may require special configuration to retrieve these fields.  See the "Configuration" section above for more details.  Also, because of limitations of the SRU output, the results may not be predictable for holdings with more than 100 item records attached.
 - If the search key is a barcode, any item-level result type (those prefixed with a double asterisk) will be filtered to include only the item records corresponding to that barcode.  For other search or result types, all matching fields in the retrieved bibliographic records are included.  As noted above, this may not work as expected if a holdings has more than 100 items attached.
 - Besides the options in the menu, you can also retrieve any MARC field from the bibliographic record. To retrieve an entire MARC field, enter its 3-digit tag number (e.g. “245”).  (For institutions that include availability information in their records, this can be retrieved using the “AVA”, “AVD” or “AVE” tags.)  
-- By default, some text is removed from the field, such as indicators, subfield tags, and the contents of subfield 6 (linkage).  To retain this information in the output, check the option "Include indicators, subfield codes, and linkage in results for full fields". 
 - A subfield can be retrieved by appending “$” followed by the subfield code (e.g. “245$a”).  
 - To retrieve the part of an 880 field corresponding to another field or subfield, append “-880” (e.g. “245-880” or “245-880$a”).  
 - To retrieve a specific substring from a field, append "(X,Y)" where X is the starting position, and Y is the length.  For example, 008(35,3) retrieves characters 35 through 37 of field 008 (aka the language code).  Character positions are zero-based, (i.e. the first character is in position 0, the second in position 1, etc.).  This is to conform with the MARC specifications for fixed fields.  Characters can be extracted from the Leader field using "Leader(X,Y)" or "LDR(X,Y)".  If Y is set to 0, then the result will include the entire remaining part of the field starting from position X.
-- To show only results containing specific text, append # followed by that text.  For example “035$a#(OCoLC)” will only retrieve 035a fields containing the text “(OCoLC)” (i.e., OCLC numbers).  
+- To show only results containing specific text, append # followed by that text.  For example “035$a#(OCoLC)” will only retrieve 035a fields containing the text “(OCoLC)” (i.e., OCLC numbers).  Filters can also be regular expressions enclosed by slashes.  For example, "300#/^[0-9]/" retrieves all 300 fields beginning with a number.
 - Multiple result types can be selected for output, in which case they will be placed in consecutive columns in the spreadsheet, starting with the one indicated in the “Leftmost result column” field.  Use the “Add”, “Remove”, “Move Up” and “Move Down” button to edit or reorder the result types.
 - For some non-Alma sources, there are a limited number of result types available, and it is not possible enter a custom value in this field.  However, some sources also include a "Holdings" result type in the drop-down, which will retrieve a list of holding institutions for the item in question.
 
-Note that this tool is designed for running queries on lists of specific titles and identifiers, rather than more general queries that might return a large number of results.  Thus, to improve performance, a maximum of 25 records will be retrieved for each row.
+Other options in the "Results" section include:
+
+**Leftmost result column**: The column that will be populated with the first result type.  If more than one result type is selected, the others will be put in consecutive columns to the right of the first.  By default, the first empty column to the right of the visible spreadsheet data is selected.  Use the arrow buttons to select a different column.  If the selected column contains data, it will be overwritten (except for hidden cells). Search results will be placed in the same rows as the corresponding search values.
+
+**Max results per query**:  The number of records to extract data from for each query.  Setting this value to a lower number may result in faster searches and keep the output from becoming cluttered with redundant information.  For Alma searches, this value cannot be set higher than 50.  For WorldCat, more than 50 records may be retrieved.  Note that the WorldCat "Holdings Code(s)" parameter is a filter applied to the search results after they are retreived.  So, for example, if the max records is set to 10, and the search parameters include "Holdings Code(s) = PUL", the output will contain all PUL records within the first 10 results, rather than the first 10 PUL records.  It is probably best to set the max records to a higher value if holdings codes are an important part of the search criteria.
 
 **Field Sets**:  Sets of field tags can be saved so that they do not need to be entered manually each time the tool is run.  After compiling a list of fields under “Result Types”, click the “New…” button to create and name a new set.  The “Load” button will populate the “Result Types” list with the fields in an existing set.  “Save” will update the fields in the selected set from the “Result types” list.  “Delete” will delete the selected set.
 
