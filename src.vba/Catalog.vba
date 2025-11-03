@@ -20,7 +20,9 @@ Global aOtherSources As Variant
 Global sFileName As String
 Global sSheetName As String
 
-Dim iMaximumRecords As Integer
+Global iMaximumRecords As Integer
+Global oSourceRange As Object
+
 Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
@@ -224,6 +226,21 @@ Sub PopulateIndexLists()
     
 End Sub
 
+Function GetLastPopulatedRow(oRange As Range) As Integer
+    sRange = oRange.Address
+    iRowCount = oRange.Rows.Count
+    iFirstSourceRow = oRange.Cells(1, 1).Row
+    If sRange Like "*#*" Then
+        iLastSourceRow = iFirstSourceRow + iRowCount - 1
+    Else
+        iLastSourceRow = oRange.Range("A999999").EntireRow.End(xlUp).Row
+    End If
+    Debug.Print iLastSourceRow
+    If iFirstSourceRow + oRange.Rows.Count - 1 < iLastSourceRow Then
+        iLastSourceRow = iFirstSourceRow + oRange.Rows.Count - 1
+    End If
+    GetLastPopulatedRow = iLastSourceRow
+End Function
 
 'Main function called when toolbar button is pressed.  Sets up dialog box.
 Sub LookupInterface(control As IRibbonControl)
@@ -255,8 +272,11 @@ Sub LookupInterface(control As IRibbonControl)
     sSheetName = ActiveSheet.Name
         
     LookupDialog.ResultColumnSpinner.Value = FindLastColumn() + 1
-    sSourceRange = Selection.Address
-    LookupDialog.LookupRange.Text = sSourceRange
+    Set oSourceRange = Selection
+    iRowCount = oSourceRange.Rows.Count
+    iFirstSourceRow = oSourceRange.Cells(1, 1).Row
+    iLastSourceRow = GetLastPopulatedRow(oSourceRange)
+    LookupDialog.LookupRange.Caption = iFirstSourceRow & " to " & iLastSourceRow
     sSourceColumn = Split(Cells(1, Range(Selection.Address).Column).Address(True, False), "$")(0)
     LookupDialog.SearchValueBox.Value = "[[" & sSourceColumn & "]]"
 
@@ -1343,8 +1363,6 @@ NextTerm:
             sPrefixQuery = sPrefixQuery & " " & sAndTermString
         End If
     Next i
-        
-    Debug.Print sPrefixQuery
     
     zrs = ZOOM_connection_search_pqf(oZConn, sPrefixQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
@@ -1607,7 +1625,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
         sResultString = ""
         iCurrentPos = 1
         Set oRecords = oRegEx.Execute(sResultJSON)
-        iRecords = oRecords.count
+        iRecords = oRecords.Count
         If iRecords = 0 Then
             ExtractField = "FALSE"
             Exit Function
@@ -1634,7 +1652,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "010"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Lccn S"""
                         Set oLCCNs = oRegEx.Execute(sCurrentRecord)
-                        If oLCCNs.count > 0 Then
+                        If oLCCNs.Count > 0 Then
                             sLCCNs = oLCCNs(0).Submatches(0)
                             sLCCNs = Replace(sLCCNs, """,""", ChrW(166))
                             sLCCNs = Replace(sLCCNs, """", "")
@@ -1645,7 +1663,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "020"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
                         Set oISBNs = oRegEx.Execute(sCurrentRecord)
-                        If oISBNs.count > 0 Then
+                        If oISBNs.Count > 0 Then
                             sISBNs = oISBNs(0).Submatches(0)
                             sISBNs = Replace(sISBNs, """,""", ChrW(166))
                             sISBNs = Replace(sISBNs, """", "")
@@ -1656,7 +1674,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "035$a#(OCoLC)"
                         oRegEx.Pattern = "\[([^\]]*)\],""label"":""Oclc S"""
                         Set oOCLCs = oRegEx.Execute(sCurrentRecord)
-                        If oOCLCs.count > 0 Then
+                        If oOCLCs.Count > 0 Then
                             sOCLCs = oOCLCs(0).Submatches(0)
                             sOCLCs = Replace(sOCLCs, """,""", ChrW(166))
                             sOCLCs = Replace(sOCLCs, """", "")
@@ -1667,7 +1685,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                     Case "245"
                         oRegEx.Pattern = """attributes"":{""title"":""([^""]*)"""
                         Set oTitle = oRegEx.Execute(sCurrentRecord)
-                        If oTitle.count > 0 Then
+                        If oTitle.Count > 0 Then
                             ExtractField = ExtractField & oTitle(0).Submatches(0)
                         End If
                     Case "recap"
@@ -1675,7 +1693,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         Set oLoc = oRegEx.Execute(sCurrentRecord)
                         oRegEx.Pattern = """location"":""([^""]*)"""
                         Set oLocName = oRegEx.Execute(sCurrentRecord)
-                        If oLoc.count > 0 Then
+                        If oLoc.Count > 0 Then
                             sLoc = oLoc(0).Submatches(0)
                             Select Case sLoc
                                 Case "scsbhl"
@@ -1685,7 +1703,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                                 Case "scsbcul"
                                     sLoc = "Columbia"
                                 Case Else
-                                    For i = 0 To oLocName.count - 1
+                                    For i = 0 To oLocName.Count - 1
                                         If InStr(1, oLocName(i).Submatches(0), "Remote Storage") > 0 Then
                                             sLoc = "Princeton"
                                             Exit For
@@ -1707,7 +1725,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                         sCGD = ""
                         Set oCGD = oRegEx.Execute(sCurrentRecord)
                         sRecapLoc = ""
-                        For i = 0 To oCGD.count - 1
+                        For i = 0 To oCGD.Count - 1
                             If oCGD(i).Submatches(0) <> "" Then
                                 sRecapLoc = oCGD(i).Submatches(0)
                                 sRecapLoc = Replace(sRecapLoc, "scsb", "")
@@ -1764,7 +1782,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
               iSubLength = -1
               oRegEx.Pattern = "\(([0-9]+),([0-9]+)\)$"
               Set oMatch = oRegEx.Execute(sResultType)
-              If oMatch.count = 1 Then
+              If oMatch.Count = 1 Then
                 iSubStartPos = oMatch(0).Submatches(0)
                 iSubLength = oMatch(0).Submatches(1)
                 If iSubLength = 0 Then
@@ -2030,7 +2048,6 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
                             bFilterMatch = False
                             If Left(sResultFilter, 1) = "/" And Right(sResultFilter, 1) = "/" Then
                                 sResultRegex = Mid(sResultFilter, 2, Len(sResultFilter) - 2)
-                                Debug.Print sResultRegex
                                 oRegEx.Pattern = sResultRegex
                                 bFilterMatch = oRegEx.Test(aResults(j))
                             Else
@@ -2089,7 +2106,7 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
         iCodeCount = 0
         oRegEx.Pattern = "[0-9]* OTHER HOLDINGS"
         Set oMatch = oRegEx.Execute(ExtractField)
-        If oMatch.count > 0 Then
+        If oMatch.Count > 0 Then
             ExtractField = CStr(CInt(Replace(oMatch(0), " OTHER HOLDINGS", "")) + 1)
         Else
             aCodesA = Split(ExtractField, "|")
@@ -2144,7 +2161,7 @@ Function DecodeIPLCUnicode(sSource As String) As String
     oRegEx.Pattern = "\\u[0-9a-f]{4}"
     oRegEx.Global = True
     Set oMatch = oRegEx.Execute(sSource)
-    For i = 0 To oMatch.count - 1
+    For i = 0 To oMatch.Count - 1
         sDecoded = Mid(CStr(oMatch.Item(i)), 3)
         sDecoded = ChrW(CDec("&H" & sDecoded))
         sSource = Replace(sSource, oMatch.Item(i), sDecoded)
@@ -2170,10 +2187,10 @@ Function NormalizeISBN(sQuery As String) As String
         sISBN = Replace(sISBN, "-", "")
         oRegEx.Pattern = "[0-9]{13}"
         Set oMatch = oRegEx.Execute(sISBN)
-        If oMatch.count = 0 Then
+        If oMatch.Count = 0 Then
             oRegEx.Pattern = "[0-9]{9}([0-9]|X)"
             Set oMatch = oRegEx.Execute(sISBN)
-            If oMatch.count > 0 Then
+            If oMatch.Count > 0 Then
                 sISBN = oMatch.Item(0)
             End If
         Else
@@ -2393,7 +2410,7 @@ Function NormalizeISSN(sQuery As String) As String
         sISSN = Replace(sISSN, " ", "")
         oRegEx.Pattern = "[0-9]{7}([0-9]|X)"
         Set oMatch = oRegEx.Execute(sISSN)
-        If oMatch.count = 0 Then
+        If oMatch.Count = 0 Then
             sISSN = ""
         Else
             sISSN = Left(sISSN, 8)
@@ -2418,7 +2435,7 @@ Public Function HtmlDecode(StringToDecode As Variant) As String
     oRegEx.Global = True
     oRegEx.Pattern = "&[^; ]+;"
     Set oMatch = oRegEx.Execute(StringToDecode)
-    For i = 0 To oMatch.count - 1
+    For i = 0 To oMatch.Count - 1
         sEntity = CStr(oMatch.Item(i))
         StringToDecode = Replace(StringToDecode, sEntity, LCase(sEntity))
     Next i

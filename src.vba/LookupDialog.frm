@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{0D2CFFAA-C931-4B39-B145-258DA0E02F22}{CB8BEEC5-BEE4-4D5D-8F1A-01440DB93838}"
+Attribute VB_Base = "0{DD770B28-B18D-4D26-B0EA-D99BE4D6B9C7}{A915B542-C5DB-469C-947A-CA1CCC7536B4}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -239,22 +239,12 @@ Private Sub OKButton_Click()
     End If
     'Validate selected range, truncate to part containing actual data
     
-    Set oSourceRange = Workbooks(Catalog.sFileName).Worksheets(Catalog.sSheetName).Range(LookupRange.Value)
     If IsObject(oSourceRange) Then
         LookupDialog.Hide
-        With oSourceRange
-            iRowCount = .Rows.count
-            iSourceColumn = .Cells(1, 1).Column
-            iFirstSourceRow = .Cells(1, 1).Row
-            If LookupRange.Value Like "*#*" Then
-                iLastSourceRow = iFirstSourceRow + iRowCount - 1
-            Else
-                iLastSourceRow = .Range("A999999").End(xlUp).Row
-            End If
-            If iFirstSourceRow + .Rows.count - 1 < iLastSourceRow Then
-                iLastSourceRow = iFirstSourceRow + .Rows.count - 1
-            End If
-        End With
+        iRowCount = oSourceRange.Rows.Count
+        iSourceColumn = oSourceRange.Cells(1, 1).Column
+        iFirstSourceRow = oSourceRange.Cells(1, 1).Row
+        iLastSourceRow = Catalog.GetLastPopulatedRow(oSourceRange)
         iStartIndex = 1
         Catalog.bTerminateLoop = False
         iTotal = iLastSourceRow - iFirstSourceRow + 1
@@ -379,7 +369,7 @@ NextRow:
                 End If
                 If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then
                     minRow = ActiveWindow.VisibleRange.Row
-                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.count
+                    maxRow = minRow + ActiveWindow.VisibleRange.Rows.Count
                     If iFirstSourceRow + i <= minRow + 1 Or iFirstSourceRow + i >= maxRow - 1 Then
                         ActiveWindow.SmallScroll down:=(iFirstSourceRow + i - (maxRow + minRow) / 2) + 1
                     End If
