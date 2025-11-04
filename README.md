@@ -126,7 +126,7 @@ You can use the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/
 - Due to restrictions on record length, WorldCat records with many holdings (more than 1700 or so) cannot be retrieved.  If you are trying to retrieve holdings codes from WC records, and a particular record is too long, a string is returned of the format `"Held/Not Held by (Your insitution code) - # other holdings"`
 
 ## Example
-This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
+This example illustrates a typical use case.  The user starts with a title list containing ISBNs and titles.  
 
 <img src='./img/example1.jpg'>
 
@@ -134,7 +134,7 @@ They would like to search the catalog to confirm which items are owned by their 
 
 <img src='./img/example2.jpg'>
 
-The "Range of cells to lookup up" field already shows the cells that the user highlighted (in this case, the entire column A).  So, it is not necessary to change this field.  The user sets "Field to Search" to "ISBN".  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
+The user sets "Field Name" to "ISBN".  The "Value" field already contains the selected column ([[A]]), so it is not necessary to change this field.  (Since the user is only searching for a single index, it is also not necessary to click "Add".)  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
 - Call number - The asterisk indicates that this will be retrieved from the availability fields.  (If the user wanted to retrieve the call number from a bibliographic field, they could enter a specific MARC field name, such as 050 or 084).
 - 035$a#(OCoLC) - This retrieves all instances of 035$a containing the text "(OCoLC)", i.e. OCLC numbers.
 - 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field, i.e. the original-script version of the Chinese titles.
