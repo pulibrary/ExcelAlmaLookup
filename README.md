@@ -17,8 +17,8 @@ The plugin will only be installed under the current user's profile.  See "Config
 
 This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration" section below).  Full documentation of the various features and options can be found further down in this README.
 
-<img width="40%" align='left' src='./img/dialog-steps.jpg'>
-<p>
+<img width="50%" align='left' src='./img/dialog-steps.jpg'>
+<div>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see above image under "Installation").</li>
  <li>If not already set, enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".  See "Configuration" section below for more information).</li>
@@ -26,7 +26,7 @@ This guide shows the basic steps involved in using this plugin.  Some features r
  <li>Select or enter the data fields to be extracted in the "Result type" field.  Multiple fields can be included in the report, using the "Add" button to the right of the list.</li>
  <li>Click "Start search" to begin the search. (Another dialog will appear showing the search progress and giving you the option to abort.)</li>
 </ol>
-</p>
+</div>
 
 
 ## Configuration
