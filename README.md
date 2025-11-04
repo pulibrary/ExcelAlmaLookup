@@ -11,15 +11,11 @@ Simply run the installer (and be sure to quit Excel before doing so).  After the
 
 <img src='./img/ribbon.jpg'>
 
-The plugin will only be installed under the current user's profile.  While it is not possible to automatically install the plugin for all users on a computer, you can specify a custom installation directory.  If this directory is accessible to other users on the computer, then they can enable the plugin without having to download and install it themselves.  To do so:
-
-1. In Excel, go to the "File" tab, and click "Options" in the left sidebar.
-2. In the options window, click "Add-ins" in the left sidebar. 
-3. On the bottom of the window, next to "Manage", select "Excel Add-Ins", and click "Go...".
-4. In the dialog that appears, click "Browse...".  Navigate to the installation directory, and select the file "CatalogLookup.xlam".  Then click "OK".
-5. Click "OK" again in the Add-ins dialog, and close the options window. The "Library Tools" tab and "Look up in Catalog" button should appear, as shown above.
+The plugin will only be installed under the current user's profile.  See "Configuration" section below if you want to install the plugin for multiple users on the same computer.
 
 ## Quick Start Guide
+
+This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration section below.)  Full documentation of the various features and options can be found further down in this README.
 
 <img align='left' src='./img/dialog-steps.jpg'>
 
@@ -42,6 +38,14 @@ After entering the URL, click “Add URL to List” to save the URL for future u
 To search a non-Alma catalog (such as WorldCat), click the "Non-Alma Sources" button.  A list of available sources will appear.  After selecting a source, it will appear in the drop-down menu along with your Alma URLs.
 
 If your SRU integration requires a username and password, you will be prompted for these.  (These are likely different than the personal credentials you use to log into Alma.  Check with your catalog administrator.)   If searching WorldCat, you will be prompted to enter your authorization number and password. (These are the same credentials used to log into OCLC Connexion Client.)  You can save these credentials by checking the "Remember these credentials" box in the login prompt, or delete the saved credentials by clicking the "Clear Credentials" button while the URL is selected. 
+
+While it is not possible to automatically install the plugin for all users on a computer, you can specify a custom installation directory.  If this directory is accessible to other users on the computer, then they can enable the plugin without having to download and install it themselves.  To do so:
+
+1. In Excel, go to the "File" tab, and click "Options" in the left sidebar.
+2. In the options window, click "Add-ins" in the left sidebar. 
+3. On the bottom of the window, next to "Manage", select "Excel Add-Ins", and click "Go...".
+4. In the dialog that appears, click "Browse...".  Navigate to the installation directory, and select the file "CatalogLookup.xlam".  Then click "OK".
+5. Click "OK" again in the Add-ins dialog, and close the options window. The "Library Tools" tab and "Look up in Catalog" button should appear, as shown above.
 
 ## Setting Up the Query
 Open an Excel spreadsheet and highlight the columns/rows containing the data you want to search for in Alma.  (You can highlight specific cells, entire rows/columns, or the entire spreadsheet.)  Then, click the “Look Up in Catalog” button.  The following dialog box will appear:
