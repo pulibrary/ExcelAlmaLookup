@@ -142,14 +142,14 @@ The user sets "Field Name" to "ISBN".  The "Value" field already contains the se
 
 For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  If more than one record was retrieved for an ISBN, then a vertical bar  is used to separate data from different records.  (This can be seen in rows 7 and 9.)  Since the ISBN in row 12 was not found in the catalog, the value FALSE is output in each of these columns.
 
-The user is now interested in seeing of WorldCat contains any records for these items cataloged by the Library of Congress, even if the ISBN is missing or different.  After highlighting columns B through E, they launch the tool again, and configure it as shown in the screenshot below.
+The user is now interested in seeing of WorldCat has any records for these items that are cataloged by the Library of Congress, even if the ISBN is missing or different.  After highlighting columns B through E, they launch the tool again, and configure it as shown in the screenshot below.
 
 <img src='./img/example4.jpg'>
 
-This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources). They contstruct a Boolean search that includes the Title equal to column B, the Year of Publication equal column E, and the Cataloging source equal to the fixed value "DLC".  They also select "OCLC No." and "WorldCat Holdings" as result types.
+This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources). They contstruct a Boolean search that includes Title = Column B, Year of Publication = Column E, and the Cataloging Source =  "DLC". (This last parameter can be found by selecting "Additional fields..." from the "Field name" drop-down.) They also select "OCLC No." and "WorldCat Holdings" as result types.
 
-When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F and G with a list of OCLC numbers and holdings codes.  As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.
+When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F and G with a list of OCLC numbers and holdings codes as shown below.
 
 <img src='./img/example5.jpg'>
 
-Note that even though the OCLC numbers include the prefixes "(OCoLC)" and "ocn", these are stripped so that only the number is searched in WorldCat.
+ As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.
