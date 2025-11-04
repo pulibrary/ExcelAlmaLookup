@@ -19,6 +19,10 @@ The plugin will only be installed under the current user's profile.  While it is
 4. In the dialog that appears, click "Browse...".  Navigate to the installation directory, and select the file "CatalogLookup.xlam".  Then click "OK".
 5. Click "OK" again in the Add-ins dialog, and close the options window. The "Library Tools" tab and "Look up in Catalog" button should appear, as shown above.
 
+## Quick Start Guide
+
+<img src='./img/dialog-steps.jpg'> text text text
+
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
 
