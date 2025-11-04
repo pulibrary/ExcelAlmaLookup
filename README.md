@@ -22,6 +22,7 @@ The plugin will only be installed under the current user's profile.  While it is
 ## Quick Start Guide
 
 <img align='left' src='./img/dialog-steps.jpg'>
+
 1. Step 1
 2. Step 2
 
