@@ -17,7 +17,7 @@ The plugin will only be installed under the current user's profile.  See "[Confi
 
 This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "[Configuration](#configuration)" section below).  Full documentation of the various features and options can be found further down in this README.
 
-<div width="100%" style="display: block">
+<div>
 <img width="50%" align='left' src='./img/dialog-steps.jpg'>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see image above under "<a href='#installation'>Installation</a>").</li>
@@ -28,6 +28,7 @@ This guide shows the basic steps involved in using this plugin.  Some features r
 </ol>
 </div>
 
+<br clear="left"/>
 
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
