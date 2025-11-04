@@ -134,24 +134,21 @@ They would like to search the catalog to confirm which items are owned by their 
 
 <img src='./img/example2.jpg'>
 
-The user sets "Field Name" to "ISBN".  The "Value" field already contains the selected column ([[A]]), so it is not necessary to change this field.  (Since the user is only searching for a single index, it is also not necessary to click "Add".)  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: 
-- Call number - The asterisk indicates that this will be retrieved from the availability fields.  (If the user wanted to retrieve the call number from a bibliographic field, they could enter a specific MARC field name, such as 050 or 084).
-- 035$a#(OCoLC) - This retrieves all instances of 035$a containing the text "(OCoLC)", i.e. OCLC numbers.
-- 245-880$a - This retrieves all instances of 880$a that are linked to the 245 field, i.e. the original-script version of the Chinese titles.
-
-The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
+The user sets "Field Name" to "ISBN".  The "Value" field already contains the selected column ([[A]]), so it is not necessary to change this field.  (Since the user is only searching for a single index, it is also not necessary to build a complex search by clicking "Add".)  The leftmost result column is also already set to C, which is the first blank column to the right of the data.  The user also sets 3 result types: MMS ID, 300$a, and 008(7,4).  (This last parameter refers to the "Date 1" value found in positions 7-10 of field 008.) The user then clicks OK.  The screenshot below shows the resulting spreadsheet:
 
 <img src='./img/example3.jpg'>
 
-For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  Since the ISBN in row 9 was not found in the catalog, the value FALSE is output in each of these columns.
+(To save space, the columns are not displayed at full width.)
 
-The user is now interested in looking up the OCLC numbers that were just retrieved in order to check the WorldCat holdings for each record.  They highlight column D, and click the "Look Up in Catalog" button again.  
+For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  If more than one record was retrieved for an ISBN, then a vertical bar  is used to separate data from different records.  (This can be seen in rows 7 and 9.)  Since the ISBN in row 12 was not found in the catalog, the value FALSE is output in each of these columns.
+
+The user is now interested in seeing of WorldCat contains any records for these items cataloged by the Library of Congress, even if the ISBN is missing or different.  After highlighting columns B through E, they launch the tool again, and configure it as shown in the screenshot below.
 
 <img src='./img/example4.jpg'>
 
-This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources).  They set "Field to Search" to "OCLC No." and "Result Types" to "WorldCat Holdings".  (It is not necessary to click the "Add" button since there is only one result type.)   Column F is automatically selected as the result column.
+This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources). They contstruct a Boolean search that includes the Title equal to column B, the Year of Publication equal column E, and the Cataloging source equal to the fixed value "DLC".  They also select "OCLC No." and "WorldCat Holdings" as result types.
 
-When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F with a list of holdings codes, separated by the broken bar character.
+When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F and G with a list of OCLC numbers and holdings codes.  As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.
 
 <img src='./img/example5.jpg'>
 
