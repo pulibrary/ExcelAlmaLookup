@@ -28,7 +28,7 @@ This guide shows the basic steps involved in using this plugin.  Some features r
 </ol>
 </div>
 
-<div align="left">
+<p>
 
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
