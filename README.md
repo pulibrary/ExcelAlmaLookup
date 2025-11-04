@@ -18,13 +18,13 @@ The plugin will only be installed under the current user's profile.  See "Config
 This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration" section below).  Full documentation of the various features and options can be found further down in this README.
 
 <div>
-<img width="50%" align='left' src='./img/dialog-steps.jpg'>
+<img width="50%" style='float: left' src='./img/dialog-steps.jpg'>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see image above under "Installation").</li>
  <li>If not already set, enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".  See "Configuration" section below for more information.)</li>
  <li>Set the "Field name" drop-down menu to the field you want to search for.  The "Value" field should contain the column letter (enclosed in double brackets) of the column containing the search data, or it can contain a fixed value.  A multi-index search may be built by clicking the "Add" button below the "Value" field after each search parameter is entered. </li>
  <li>Select or enter the data fields to be extracted in the "Result type" menu.  Multiple fields can be included in the report, using the "Add" button to the right of the list.  </li>
- <li>Click "Start search" to begin the search.  Search results for each row will appear starting in the column specified in "Leftmost result column". (Another dialog will appear showing the search progress and giving you the option to abort.)</li>
+ <li>Click "Start search" to begin the search.  Search results for each row will appear starting in the column specified in "Leftmost result column". (Another dialog will appear showing the search progress and giving you the option to stop.)</li>
 </ol>
 <div>
 
