@@ -21,7 +21,8 @@ The plugin will only be installed under the current user's profile.  While it is
 
 ## Quick Start Guide
 <p>
-<img alig='left' src='./img/dialog-steps.jpg'>text text text
+ text text text
+<img alig='left' src='./img/dialog-steps.jpg'>
 </p>
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
