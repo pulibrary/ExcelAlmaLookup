@@ -123,7 +123,7 @@ You can use the [discussion forum](https://github.com/pulibrary/ExcelAlmaLookup/
 
 ### Troubleshooting/Known Issues
 - Some users have reported that WorldCat queries always return FALSE.  If you experience this issue, please ask your IT department to configure your firewall to allow connections to zcat.oclc.org on port 210.
-- Due to restrictions on record length, WorldCat records with many holdings (more than 1700 or so) cannot be retrieved.  If you are trying to retrieve holdings codes from WC records, and a particular record is too long, a string is returned of the format "Held/Not Held by (Your insitution code) - # other holdings"
+- Due to restrictions on record length, WorldCat records with many holdings (more than 1700 or so) cannot be retrieved.  If you are trying to retrieve holdings codes from WC records, and a particular record is too long, a string is returned of the format `"Held/Not Held by (Your insitution code) - # other holdings"`
 
 ## Example
 This example illustrates a typical use case.  The user starts with a title list containing ISBNs and romanized titles for a set of Chinese books.   
