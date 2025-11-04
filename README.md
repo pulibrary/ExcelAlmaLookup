@@ -18,7 +18,7 @@ The plugin will only be installed under the current user's profile.  See "Config
 This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration" section below).  Full documentation of the various features and options can be found further down in this README.
 
 <div>
-<img width="50%" style='float: left;' src='./img/dialog-steps.jpg'>
+<img width="50%" align='left' src='./img/dialog-steps.jpg'>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see image above under "Installation").</li>
  <li>If not already set, enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".  See "Configuration" section below for more information.)</li>
