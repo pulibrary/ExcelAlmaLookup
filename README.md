@@ -18,11 +18,16 @@ The plugin will only be installed under the current user's profile.  See "Config
 This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration section below.)  Full documentation of the various features and options can be found further down in this README.
 
 <img align='left' src='./img/dialog-steps.jpg'>
+<p>
+<ol>
+ <li>Select the spreadsheet data you want to search for, then click the "Look up in Catalog" button (see image above)</li>
+ <li>If not already set, enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat").</li>
+ <li>Set the "Field name" drop-down menu to the field you want to search for.  The "Value" field should contains the column letter (enclosed in double brackets) of the column containing the search data.  A multi-index search may be build by clicking the "Add" button below after each search parameter is entered. </li>
+ <li>Select or enter the data elements to be extracted in the "Result type" field.  Multile elements can be included in the report, using the "Add" button to the right of the list.</li>
+ <li>Click "Start search" to begin the search.</li>
+</ol>
+</p>
 
-1. Step 1
-2. Step 2
-
-<p></p>
 
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
