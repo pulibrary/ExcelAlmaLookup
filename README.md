@@ -152,4 +152,4 @@ When the user clicks the "OK" button, they will be prompted to enter their World
 
 <img src='./img/example5.jpg'>
 
- As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.
+ As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.  If records were not found for a give row, then FALSE is output in columns F and G for that row.
