@@ -15,7 +15,7 @@ The plugin will only be installed under the current user's profile.  See "Config
 
 ## Quick Start Guide
 
-This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration" section below).  Full documentation of the various features and options can be found further down in this README.
+This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "[Configuration](#configuration)" section below).  Full documentation of the various features and options can be found further down in this README.
 
 <div>
 <img width="50%" align='left' src='./img/dialog-steps.jpg'>
