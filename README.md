@@ -26,7 +26,7 @@ This guide shows the basic steps involved in using this plugin.  Some features r
  <li>Select or enter the data fields to be extracted in the "Result type" menu.  Multiple fields can be included in the report, using the "Add" button to the right of the list.  </li>
  <li>Click "Start search" to begin the search.  Search results for each row will appear starting in the column specified in "Leftmost result column". (Another dialog will appear showing the search progress and giving you the option to stop.)</li>
 </ol>
-<div>
+</div>
 
 ## Configuration
 Your local Alma instance must have an "SRU Server Type Integration Profile" enabled.  Many institutions already have this feature turned on in Alma. If yours does not, you can ask your catalog administrator to enable it, as described in the following documentation:
