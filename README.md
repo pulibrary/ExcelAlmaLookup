@@ -15,9 +15,9 @@ The plugin will only be installed under the current user's profile.  See "Config
 
 ## Quick Start Guide
 
-This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration section below.)  Full documentation of the various features and options can be found further down in this README.
+This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "Configuration" section below).  Full documentation of the various features and options can be found further down in this README.
 
-<img align='left' src='./img/dialog-steps.jpg'>
+<img width="80%" align='left' src='./img/dialog-steps.jpg'>
 <p>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see above image under "Installation").</li>
