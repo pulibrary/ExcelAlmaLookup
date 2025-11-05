@@ -141,7 +141,7 @@ The user sets "Field Name" to "ISBN".  The "Value" field already contains the se
 
 For each row of the spreadsheet, the three data elements mentioned above are output in columns C, D, and E respectively. Since the user selected the option to generate column headers, these appear in the first row.  If more than one record was retrieved for an ISBN, then a vertical bar  is used to separate data from different records.  (This can be seen in rows 7 and 9.)  Since the ISBN in row 12 was not found in the catalog, the value FALSE is output in each of these columns.
 
-The user is now interested in seeing of WorldCat has any records for these items that are cataloged by the Library of Congress, even if the ISBN is missing or different.  After highlighting columns B through E, they launch the tool again, and configure it as shown in the screenshot below.
+The user is now interested in seeing if WorldCat has any records for these items that are cataloged by the Library of Congress, even if the ISBN is missing or different than what is in column A.  After highlighting columns B through E, they launch the tool again, and configure it as shown in the screenshot below.
 
 <img src='./img/example4.jpg'>
 
