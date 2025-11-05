@@ -153,4 +153,4 @@ When the user clicks the "OK" button, they will be prompted to enter their World
 
 (Columns C and D are hidden in this screenshot.)
 
- As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.  If records were not found for a give row, then FALSE is output in columns F and G for that row.
+ As before, the data from each record is separated by a solid vertical bar.  The list of holdings codes within a particular record is delimited with the broken vertical bar character.  If records were not found in WorldCat for a given row, then FALSE is output in columns F and G of that row.
