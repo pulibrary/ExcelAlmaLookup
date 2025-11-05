@@ -228,16 +228,14 @@ End Sub
 
 Function GetLastPopulatedRow(oRange As Range) As Integer
     sRange = oRange.Address
+    Debug.Print sRange
     iRowCount = oRange.Rows.Count
     iFirstSourceRow = oRange.Cells(1, 1).Row
-    If sRange Like "*#*" Then
-        iLastSourceRow = iFirstSourceRow + iRowCount - 1
-    Else
-        iLastSourceRow = oRange.Range("A999999").EntireRow.End(xlUp).Row
-    End If
+    iLastSourceRow = oRange.Range("A999999").EntireRow.End(xlUp).Row
     If iFirstSourceRow + oRange.Rows.Count - 1 < iLastSourceRow Then
         iLastSourceRow = iFirstSourceRow + oRange.Rows.Count - 1
     End If
+    Debug.Print iLastSourceRow
     GetLastPopulatedRow = iLastSourceRow
 End Function
 
@@ -1302,10 +1300,12 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
             End If
         End If
         
-        If sIndex = 4 Then
-            sIndex = "@attr 4=1 @attr 1=" & sIndex
-        ElseIf Left(sIndex, 1) <> "@" Then
-            sIndex = "@attr 1=" & sIndex
+        If IsNumeric(sIndex) Then
+            If sIndex = 4 Then
+                sIndex = "@attr 4=1 @attr 1=" & sIndex
+            Else
+                sIndex = "@attr 1=" & sIndex
+            End If
         End If
         
         Do While (InStr(1, sQuery, "||") > 0)
@@ -1362,6 +1362,8 @@ NextTerm:
             sPrefixQuery = sPrefixQuery & " " & sAndTermString
         End If
     Next i
+    
+    Debug.Print sPrefixQuery
     
     zrs = ZOOM_connection_search_pqf(oZConn, sPrefixQuery)
     ZOOM_resultset_option_set zrs, "count", iMaximumRecords
