@@ -145,9 +145,9 @@ The user is now interested in seeing if WorldCat has any records for these items
 
 <img src='./img/example4.jpg'>
 
-This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources). They contstruct a Boolean search that includes Title = Column B, Year of Publication = Column E, and the Cataloging Source =  "DLC". (This last parameter can be found by selecting "Additional fields..." from the "Field name" drop-down.) They also select "OCLC No." and "WorldCat Holdings" as result types.
+This time, they use the "Non-Alma Sources" button to set the source to "source:worldcat".  (If they have done this in the past, then it would already appear in the drop-down list of sources.) They contstruct a Boolean search that includes Title = Column B, Year of Publication = Column E, and the Cataloging Source =  "DLC". (This last parameter can be found by selecting "Additional fields..." from the "Field name" drop-down.) They also select "OCLC No." and "WorldCat Holdings" as result types.
 
-When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login).  Then, the tool looks up each OCLC number in WorldCat, and populates column F and G with a list of OCLC numbers and holdings codes as shown below.
+When the user clicks the "OK" button, they will be prompted to enter their WorldCat authorization number and password (unless they have entered it before and selected the option to save the login.)  Then, the tool looks up each OCLC number in WorldCat, and populates column F and G with a list of OCLC numbers and holdings codes as shown below.
 
 <img src='./img/example5.jpg'>
 
