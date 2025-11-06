@@ -89,7 +89,7 @@ Other fields in the "Search" section include:
 
 ### Extracting fields for the report
 
-The **"Results"** section of the dialog is used to indicate what should be extracted from the records that are found.  The **"Result type(s)"** drop-down menu and the list box below show what fields will be included.  These can be specified in a few different ways:
+The **"Results"** section of the dialog is used to indicate what should be extracted from the records that are found.  The **"Result types"** drop-down menu and the list box below show what fields will be included.  These can be specified in a few different ways:
 - Selecting “True/False” will populate the result column with TRUE if records were found for that row, FALSE if not.  
 - Other result types, such as call numbers and location codes, may be selected from the dropdown list.  Result types prefixed with a single asterisk are taken from the availability fields.  Those with a double asterisk are from the ISO 20775 Holdings data.  Your catalog may require special configuration to retrieve these fields.  See the "[Configuration](#configuration)" section above for more details.  Also, because of limitations of the SRU output, the results may not be predictable for holdings with more than 100 item records attached.
 - If the search key includes a barcode, any item-level result type (those prefixed with a double asterisk) will be filtered to include only the item records corresponding to that barcode.  For other search or result types, all matching fields in the retrieved bibliographic records are included.  As noted above, this may not work as expected if a holdings record has more than 100 items attached.
