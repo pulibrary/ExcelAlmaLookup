@@ -1,5 +1,5 @@
 Attribute VB_Name = "AdditionalFieldsDialog"
-Attribute VB_Base = "0{1E02F824-1DBF-46C0-B1F7-0CDB260E3F62}{9945439B-AF24-4393-B1A0-0CF31612E17C}"
+Attribute VB_Base = "0{FA48B1CA-3DDF-43FF-955F-366A6ECEA367}{A4911A58-2E3F-455B-977D-7DD0CC4F7E71}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True

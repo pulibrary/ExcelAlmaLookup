@@ -228,14 +228,12 @@ End Sub
 
 Function GetLastPopulatedRow(oRange As Range) As Integer
     sRange = oRange.Address
-    Debug.Print sRange
     iRowCount = oRange.Rows.Count
     iFirstSourceRow = oRange.Cells(1, 1).Row
     iLastSourceRow = oRange.Range("A999999").EntireRow.End(xlUp).Row
     If iFirstSourceRow + oRange.Rows.Count - 1 < iLastSourceRow Then
         iLastSourceRow = iFirstSourceRow + oRange.Rows.Count - 1
     End If
-    Debug.Print iLastSourceRow
     GetLastPopulatedRow = iLastSourceRow
 End Function
 
@@ -1483,28 +1481,6 @@ Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
     sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
     Dim sFormat As String
     sURL = ""
-    
-    'If LookupDialog.ValidateCheckBox.Value And Not bAdvancedSearch Then
-    '    If sSearchType = "ISBN" Then
-    '        Dim sISBN As String
-    '        sISBN = NormalizeISBN(sQuery1)
-    '        iVbarPos = InStr(1, sISBN, "|")
-    '        If iVbarPos > 0 Then
-    '            sISBN = Left(sISBN, iVbarPos - 1)
-    '        End If
-    '        If sISBN = "INVALID" Or sISBN <> GenerateCheckDigit(sISBN) Then
-    '            Lookup = "INVALID"
-    '            Exit Function
-    '        End If
-    '    ElseIf sSearchType = "ISSN" Then
-    '        Dim sISSN As String
-    '        sISSN = NormalizeISSN(sQuery1)
-    '        If sISSN = "INVALID" Or sISSN <> GenerateCheckDigit(sISSN) Then
-    '            Lookup = "INVALID"
-    '            Exit Function
-    '        End If
-    '    End If
-    'End If
       
     If sCatalogURL = "source:recap" Then
         Select Case sSearchType
