@@ -129,7 +129,7 @@ This example illustrates a typical use case.  The user starts with a title list 
 
 <img src='./img/example1.jpg'>
 
-They would like to search the catalog to confirm which items are owned by their instituion, and retrieve additional data for those items.  Since ISBNs are a more reliable search key than titles, the user highlights column A contianing the ISBNs, then clicks the "Look Up in Catalog" button in the "Library Tools" tab.  This brings up the following dialog:
+They would like to search their institution's Alma catalog to confirm which items are owned by their instituion, and retrieve additional data for those items.  Since ISBNs are a more reliable search key than titles, the user highlights column A contianing the ISBNs, then clicks the "Look Up in Catalog" button in the "Library Tools" tab.  This brings up the following dialog:
 
 <img src='./img/example2.jpg'>
 
