@@ -15,7 +15,7 @@ The plugin will only be installed under the current user's profile.  See "[Confi
 
 ## Quick Start Guide
 
-This guide shows the basic steps involved in using this plugin.  Some features require special configuration in Alma (see "[Configuration](#configuration)" section below).  Full documentation of the various features and options can be found further down in this README.
+This guide shows the basic steps involved in using this plugin. (See also the [Example](#example) section for a more detailed description of use cases involving Alma and WorldCat.) Some features require special configuration in Alma (see "[Configuration](#configuration)" section below).  Full documentation of the various features and options can be found further down in this README.
 
 <div>
 <img width="50%" align='right' src='./img/dialog-steps.jpg'>
