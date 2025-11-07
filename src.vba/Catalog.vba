@@ -226,7 +226,7 @@ Sub PopulateIndexLists()
     
 End Sub
 
-Function GetLastPopulatedRow(oRange As Range) As Integer
+Function GetLastPopulatedRow(oRange As Range) As Long
     sRange = oRange.Address
     iRowCount = oRange.Rows.Count
     iFirstSourceRow = oRange.Cells(1, 1).Row
