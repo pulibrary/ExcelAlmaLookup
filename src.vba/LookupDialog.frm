@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{EC73DF4A-3089-496A-820E-7FF30A870A92}{F0E24A19-3D94-4EB7-98B1-0CA1F5EED91C}"
+Attribute VB_Base = "0{A7B97069-2216-4518-8A14-70CFC660F422}{AB56B26D-96F3-478C-948A-07D0F0CF6883}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -198,6 +198,14 @@ Private Sub NewSetButton_Click()
 End Sub
 
 Private Sub OKButton_Click()
+    Dim sCatalogURL As String
+    sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
+    
+    If sCatalogURL = "" Then
+        MsgBox ("Please enter an Alma URL or select a non-Alma source.")
+        Exit Sub
+    End If
+    
     If Catalog.bIsAlma Then
         aFieldMap = Catalog.GetAllFields()
         If IsNull(aFieldMap) Then
@@ -209,8 +217,6 @@ Private Sub OKButton_Click()
         Exit Sub
     End If
     
-    Dim sCatalogURL As String
-    sCatalogURL = CStr(LookupDialog.CatalogURLBox.Text)
     If Catalog.bIsWorldCat Then
         bSuccess = Catalog.Z3950Connect(sCatalogURL)
         If Not bSuccess Then
