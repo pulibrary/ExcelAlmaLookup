@@ -21,7 +21,7 @@ This guide shows the basic steps involved in using this plugin. (See also the [E
 <img width="50%" align='right' src='./img/dialog-steps.jpg'>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see image above under "<a href='#installation'>Installation</a>").</li>
- <li>Select or enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".  See "<a href='#configuration'>Configuration</a>" section below for more information.)</li>
+ <li>Select or enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".)  See "<a href='#configuration'>Configuration</a>" section below for more information.</li>
  <li>Set the "Field name" drop-down menu to the desired search index.  The "Value" field should contain the column letter (enclosed in double brackets) of the column containing the search data, or it can contain a fixed value.  A multi-index search may be built by clicking the "Add" button below the "Value" field after each search parameter is entered. </li>
  <li>Select or enter the fields to be extracted in the "Result types" menu.  Multiple fields may be included, using the "Add" button to the right of the list.  </li>
  <li>Click "Start search" to begin the search.  If your SRU requires a username and password, a login prompt will appear. (If searching WorldCat, enter your WorldCat authorization number and password here.)  Search results for each row will appear starting in the column specified in "Leftmost result column". (Another dialog will appear showing the search progress and giving you the option to stop.)</li>
