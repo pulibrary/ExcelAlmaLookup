@@ -83,7 +83,7 @@ Other fields in the "Search" section include:
 
 **Generate header row from result types**: This option is available if the "Ignore First Row" option is checked.  For each result column, the header row will be populated with the corresponding label from the "Result Types" list.
 
-**Validate and search equivalent ISBN/SNs**: If checked, and if “Field to search” is set to “ISBN” or “ISSN”, then each ISBN/SN will be validated.  If invalid, the value "INVALID" will be output in the result column(s). For ISBNs, the search will be done on both the 10-digit and 13-digit forms, regardless of which form is found in the spreadsheet.
+**Validate and search equivalent ISBN/SNs**: If checked, and if the search fields include ISBNs or ISSNs, then each one will be validated.  If invalid, the value "INVALID" will be output in the result column(s). For ISBNs, the search will be done on both the 10-digit and 13-digit forms, regardless of which form is found in the spreadsheet.
 
 **Include suppressed records**: If checked, then suppressed records will be included in the search results.
 
