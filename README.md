@@ -7,7 +7,7 @@ An Alma batch-search plugin designed to be used within Microsoft Excel for Windo
 
 Simply run the installer (and be sure to quit Excel before doing so).  If you have a previous version of the plugin installed already, it will be replaced.  After the plugin is installed, a new tab “Library Tools” will appear in the Excel ribbon.  This tab will contain a button labeled “Look Up in Catalog”. 
 
-(Note: Depending on your computer's security settings, trying to run the installer may pop up a warning that "Windows protected Your PC".  If you receive this warning, you can proceed with the installation by clicking "More info" and then "Run anyway".  The file is digitially signed, allowing you to verify that it is published by Princeton University.)
+(Note: Depending on your computer's security settings, trying to run the installer may pop up a warning that "Windows protected Your PC".  If you receive this warning, you can proceed with the installation by clicking "More info" and then "Run anyway".  The installer is digitially signed, allowing you to verify that it is published by Princeton University.)
 
 <img src='./img/ribbon.jpg'>
 
