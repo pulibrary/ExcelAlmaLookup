@@ -11,17 +11,17 @@ Simply run the installer (and be sure to quit Excel before doing so).  If you ha
 
 <img src='./img/ribbon.jpg'>
 
-The plugin will only be installed under the current user's profile.  See "[Configuration](#configuration)" section below if you want to install the plugin for multiple users on the same computer.
+The plugin will only be installed under the current user's profile.  See [Configuration](#configuration) section below if you want to install the plugin for multiple users on the same computer.
 
 ## Quick Start Guide
 
-This guide shows the basic steps involved in using this plugin. (See also the [Example](#example) section for a more detailed description of use cases involving Alma and WorldCat.) Some features require special configuration in Alma (see "[Configuration](#configuration)" section below).  Full documentation of the various features and options can be found further down in this README.
+This guide shows the basic steps involved in using this plugin. (See also the [Example](#example) section for a more detailed description of use cases involving Alma and WorldCat.) Some features require special configuration in Alma (see [Configuration](#configuration) section below).  Full documentation of the various features and options can be found further down in this README.
 
 <div>
 <img width="50%" align='right' src='./img/dialog-steps.jpg'>
 <ol>
  <li>Select the spreadsheet cells containing the search data, then click the "Look up in Catalog" button (see image above under "<a href='#installation'>Installation</a>").</li>
- <li>Select or enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".)  See "<a href='#configuration'>Configuration</a>" section below for more information.</li>
+ <li>Select or enter your institution's Alma SRU Base URL (or, to search WorldCat, click "Non-Alma Sources" and select "source:worldcat".)  See <a href='#configuration'>Configuration</a> section below for more information.</li>
  <li>Set the "Field name" drop-down menu to the desired search index.  The "Value" field should contain the column letter (enclosed in double brackets) of the column containing the search data, or it can contain a fixed value.  A multi-index search may be built by clicking the "Add" button below the "Value" field after each search parameter is entered. </li>
  <li>Select or enter the fields to be extracted in the "Result types" menu.  Multiple fields may be included, using the "Add" button to the right of the list.  </li>
  <li>Click "Start search" to begin the search.  If your SRU requires a username and password, a login prompt will appear. (If searching WorldCat, enter your WorldCat authorization number and password here.)  Search results for each row will appear starting in the column specified in "Leftmost result column". Another dialog will appear showing the search progress and giving you the option to stop.</li>
@@ -58,7 +58,7 @@ Open an Excel spreadsheet and highlight the columns/rows containing the data you
 
 <img src='./img/dialog.jpg'>
 
-See the "[Configuration](#configuration)" section above regarding what value to use in the "Base URL for Alma SRU" field.
+See the [Configuration](#configuration) section above regarding what value to use in the "Base URL for Alma SRU" field.
 
 ### Building the Search 
 
@@ -91,7 +91,7 @@ Other fields in the "Search" section include:
 
 The **"Results"** section of the dialog is used to indicate what should be extracted from the records that are found.  The **"Result types"** drop-down menu and the list box below show what fields will be included.  These can be specified in a few different ways:
 - Selecting “True/False” will populate the result column with TRUE if records were found for that row, FALSE if not.  
-- Other result types, such as call numbers and location codes, may be selected from the dropdown list.  Result types prefixed with a single asterisk are taken from the availability fields.  Those with a double asterisk are from the ISO 20775 Holdings data.  Your catalog may require special configuration to retrieve these fields.  See the "[Configuration](#configuration)" section above for more details.  Also, because of limitations of the SRU output, the results may not be predictable for holdings with more than 100 item records attached.
+- Other result types, such as call numbers and location codes, may be selected from the dropdown list.  Result types prefixed with a single asterisk are taken from the availability fields.  Those with a double asterisk are from the ISO 20775 Holdings data.  Your catalog may require special configuration to retrieve these fields.  See the [Configuration](#configuration) section above for more details.  Also, because of limitations of the SRU output, the results may not be predictable for holdings with more than 100 item records attached.
 - If the search key includes a barcode, any item-level result type (those prefixed with a double asterisk) will be filtered to include only the item records corresponding to that barcode.  For other search or result types, all matching fields in the retrieved bibliographic records are included.  As noted above, this may not work as expected if a holdings record has more than 100 items attached.
 - Besides the options in the menu, you can also retrieve any MARC field from the bibliographic record. To retrieve an entire MARC field, enter its 3-digit tag number (e.g. “245”).  (For institutions that include availability information in their records, this can be retrieved using the “AVA”, “AVD” or “AVE” tags.)  
 - A specific subfield can be retrieved by appending “$” followed by the subfield code (e.g. “245$a”).  
