@@ -51,7 +51,7 @@ While it is not possible to automatically install the plugin for all users on a 
 2. In the options window, click "Add-ins" in the left sidebar. 
 3. On the bottom of the window, next to "Manage", select "Excel Add-Ins", and click "Go...".
 4. In the dialog that appears, click "Browse...".  Navigate to the installation directory, and select the file "CatalogLookup.xlam".  Then click "OK".
-5. Click "OK" again in the Add-ins dialog, and close the options window. The "Library Tools" tab and "Look up in Catalog" button should appear, as shown above.
+5. Click "OK" again in the Add-ins dialog, and close the options window. The "Library Tools" tab and "Look up in Catalog" button should appear, as shown above in the [Installation](#installation) section.
 
 ## Setting Up the Query
 Open an Excel spreadsheet and highlight the columns/rows containing the data you want to search for in Alma.  (You can highlight specific cells, entire rows/columns, or the entire spreadsheet.)  Then, click the “Look Up in Catalog” button.  The following dialog box will appear:
