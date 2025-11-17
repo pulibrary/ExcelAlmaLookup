@@ -441,12 +441,15 @@ Sub LoadSavedResultList()
     
     LookupDialog.MaxResultsBox.Value = iMaxResults
     LookupDialog.IncludeExtrasCheckBox.Value = GetSetting(sRegistryDir, "Results", "IncludeExtras", False)
+    On Error GoTo EndSub
     LookupDialog.ResultTypeCombo.Value = GetSetting(sRegistryDir, "Results", "RESULT000", "")
+    
     
     LookupDialog.ResultTypeList.Clear
     For i = 1 To iMax
         LookupDialog.ResultTypeList.AddItem GetSetting(sRegistryDir, "Results", "RESULT" & Format(i, "000"), "")
     Next i
+EndSub:
 End Sub
 
 
@@ -472,6 +475,7 @@ Sub LoadSavedSearchParams()
     
     iMax = GetSetting(sRegistryDir, "Search", "_Max", 0)
     
+    On Error GoTo EndSub
     LookupDialog.BooleanCombo.Value = GetSetting(sRegistryDir, "Search", "BOOLEAN000", "")
     LookupDialog.SearchFieldCombo.Value = GetSetting(sRegistryDir, "Search", "INDEX000", "")
     LookupDialog.OperatorCombo.Value = GetSetting(sRegistryDir, "Search", "OPERATOR000", "")
@@ -489,6 +493,7 @@ Sub LoadSavedSearchParams()
         LookupDialog.BooleanCombo.Enabled = True
     End If
     PopulateBooleanCombo
+EndSub:
 End Sub
 
 Sub SaveResultList()
