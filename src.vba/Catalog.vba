@@ -26,7 +26,7 @@ Global oSourceRange As Object
 Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sVersion = "v1.4.0"
+Public Const sVersion = "v1.4.1"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"

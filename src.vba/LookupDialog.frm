@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{024B1DD0-D976-4450-826D-A7AF06D38AC9}{E00E4CA3-9E10-49AA-91E0-DF571CEF0D5C}"
+Attribute VB_Base = "0{C52FC6E5-D762-4B54-973A-B7697C09698C}{A07A8ECF-409A-42F0-8638-E2D41D2737BF}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
