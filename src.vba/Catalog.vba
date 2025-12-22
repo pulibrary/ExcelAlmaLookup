@@ -26,7 +26,7 @@ Global oSourceRange As Object
 Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sVersion = "v1.4.1"
+Public Const sVersion = "v1.4.2"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -1621,114 +1621,116 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
             Else
                 sCurrentRecord = sResultJSON
             End If
-            For h = 0 To UBound(aResultFields)
-                If ExtractField <> "" And Right(ExtractField, 1) <> "|" Then
-                    ExtractField = ExtractField & "|"
-                End If
-                sResultType = aResultFields(h)
-                Select Case sResultType
-                    Case "exists"
-                        ExtractField = "TRUE "
-                    Case "001"
-                        ExtractField = ExtractField & sID
-                    Case "010"
-                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Lccn S"""
-                        Set oLCCNs = oRegEx.Execute(sCurrentRecord)
-                        If oLCCNs.Count > 0 Then
-                            sLCCNs = oLCCNs(0).Submatches(0)
-                            sLCCNs = Replace(sLCCNs, """,""", ChrW(166))
-                            sLCCNs = Replace(sLCCNs, """", "")
-                            ExtractField = ExtractField & sLCCNs
-                        Else
-                            ExtractField = ExtractField & " "
-                        End If
-                    Case "020"
-                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
-                        Set oISBNs = oRegEx.Execute(sCurrentRecord)
-                        If oISBNs.Count > 0 Then
-                            sISBNs = oISBNs(0).Submatches(0)
-                            sISBNs = Replace(sISBNs, """,""", ChrW(166))
-                            sISBNs = Replace(sISBNs, """", "")
-                            ExtractField = ExtractField & sISBNs
-                        Else
-                            ExtractField = ExtractField & " "
-                        End If
-                    Case "035$a#(OCoLC)"
-                        oRegEx.Pattern = "\[([^\]]*)\],""label"":""Oclc S"""
-                        Set oOCLCs = oRegEx.Execute(sCurrentRecord)
-                        If oOCLCs.Count > 0 Then
-                            sOCLCs = oOCLCs(0).Submatches(0)
-                            sOCLCs = Replace(sOCLCs, """,""", ChrW(166))
-                            sOCLCs = Replace(sOCLCs, """", "")
-                            ExtractField = ExtractField & sOCLCs
-                        Else
-                            ExtractField = ExtractField & " "
-                        End If
-                    Case "245"
-                        oRegEx.Pattern = """attributes"":{""title"":""([^""]*)"""
-                        Set oTitle = oRegEx.Execute(sCurrentRecord)
-                        If oTitle.Count > 0 Then
-                            ExtractField = ExtractField & oTitle(0).Submatches(0)
-                        End If
-                    Case "recap"
-                        oRegEx.Pattern = """location_code"":""([^""]*)"""
-                        Set oLoc = oRegEx.Execute(sCurrentRecord)
-                        oRegEx.Pattern = """location"":""([^""]*)"""
-                        Set oLocName = oRegEx.Execute(sCurrentRecord)
-                        If oLoc.Count > 0 Then
-                            sLoc = oLoc(0).Submatches(0)
-                            Select Case sLoc
-                                Case "scsbhl"
-                                    sLoc = "Harvard"
-                                Case "scsbnypl"
-                                    sLoc = "NYPL"
-                                Case "scsbcul"
-                                    sLoc = "Columbia"
-                                Case Else
-                                    For i = 0 To oLocName.Count - 1
-                                        If InStr(1, oLocName(i).Submatches(0), "Remote Storage") > 0 Then
-                                            sLoc = "Princeton"
-                                            Exit For
-                                        End If
-                                    Next i
-                                    If sLoc <> "Princeton" Then
-                                        sLoc = ""
-                                    End If
-                                    
-                            End Select
-                        End If
-                        If InStr(1, ExtractField, sLoc) = 0 Then
-                            ExtractField = ExtractField & sLoc
-                        Else
-                            ExtractField = Left(ExtractField, Len(ExtractField) - 1)
-                        End If
-                    Case "recap_cgd"
-                        oRegEx.Pattern = "(?:""location_code"":""([^""]*)""[^}]*)?(?:""description"":""([^""]*)""[^}]*)?(?:""use_statement"":""([^""]*)""[^}]*)?""cgd"":""([^""]*)""[^}]*""collection_code"":""([^""]*)"""
-                        sCGD = ""
-                        Set oCGD = oRegEx.Execute(sCurrentRecord)
-                        sRecapLoc = ""
-                        For i = 0 To oCGD.Count - 1
-                            If oCGD(i).Submatches(0) <> "" Then
-                                sRecapLoc = oCGD(i).Submatches(0)
-                                sRecapLoc = Replace(sRecapLoc, "scsb", "")
-                            End If
-                            If sCGD <> "" Then
-                                sCGD = sCGD & ChrW(166)
-                            End If
-                            sCGD = sCGD & sRecapLoc & "-" & oCGD(i).Submatches(4) & "-" & oCGD(i).Submatches(3)
-                            If oCGD(i).Submatches(2) <> "" Then
-                                sCGD = sCGD & "-" & oCGD(i).Submatches(2)
-                            End If
-                            If oCGD(i).Submatches(1) <> "" Then
-                                sCGD = sCGD & "-" & oCGD(i).Submatches(1)
+            
+            oRegEx.Pattern = """location_code"":""([^""]*)"""
+            Set oLoc = oRegEx.Execute(sCurrentRecord)
+            oRegEx.Pattern = """location"":""([^""]*)"""
+            Set oLocName = oRegEx.Execute(sCurrentRecord)
+            If oLoc.Count > 0 Then
+                sLoc = oLoc(0).Submatches(0)
+                Select Case sLoc
+                    Case "scsbhl"
+                        sLoc = "Harvard"
+                    Case "scsbnypl"
+                        sLoc = "NYPL"
+                    Case "scsbcul"
+                        sLoc = "Columbia"
+                    Case Else
+                        For i = 0 To oLocName.Count - 1
+                            If InStr(1, oLocName(i).Submatches(0), "Remote Storage") > 0 Then
+                                sLoc = "Princeton"
+                                Exit For
                             End If
                         Next i
-                        ExtractField = ExtractField & sCGD
-                    Case Else
-                        ExtractField = "ERROR:InvalidRecap"
-                        Exit Function
+                        If sLoc <> "Princeton" Then
+                            sLoc = ""
+                        End If
                 End Select
-            Next h
+            End If
+            If sLoc <> "" Then
+                For h = 0 To UBound(aResultFields)
+                    If ExtractField <> "" And Right(ExtractField, 1) <> "|" Then
+                        ExtractField = ExtractField & "|"
+                    End If
+                    sResultType = aResultFields(h)
+                    Select Case sResultType
+                        Case "exists"
+                            ExtractField = "TRUE "
+                        Case "001"
+                            ExtractField = ExtractField & sID
+                        Case "010"
+                            oRegEx.Pattern = "\[([^\]]*)\],""label"":""Lccn S"""
+                            Set oLCCNs = oRegEx.Execute(sCurrentRecord)
+                            If oLCCNs.Count > 0 Then
+                                sLCCNs = oLCCNs(0).Submatches(0)
+                                sLCCNs = Replace(sLCCNs, """,""", ChrW(166))
+                                sLCCNs = Replace(sLCCNs, """", "")
+                                ExtractField = ExtractField & sLCCNs
+                            Else
+                                ExtractField = ExtractField & " "
+                            End If
+                        Case "020"
+                            oRegEx.Pattern = "\[([^\]]*)\],""label"":""Isbn S"""
+                            Set oISBNs = oRegEx.Execute(sCurrentRecord)
+                            If oISBNs.Count > 0 Then
+                                sISBNs = oISBNs(0).Submatches(0)
+                                sISBNs = Replace(sISBNs, """,""", ChrW(166))
+                                sISBNs = Replace(sISBNs, """", "")
+                                ExtractField = ExtractField & sISBNs
+                            Else
+                                ExtractField = ExtractField & " "
+                            End If
+                        Case "035$a#(OCoLC)"
+                            oRegEx.Pattern = "\[([^\]]*)\],""label"":""Oclc S"""
+                            Set oOCLCs = oRegEx.Execute(sCurrentRecord)
+                            If oOCLCs.Count > 0 Then
+                                sOCLCs = oOCLCs(0).Submatches(0)
+                                sOCLCs = Replace(sOCLCs, """,""", ChrW(166))
+                                sOCLCs = Replace(sOCLCs, """", "")
+                                ExtractField = ExtractField & sOCLCs
+                            Else
+                                ExtractField = ExtractField & " "
+                            End If
+                        Case "245"
+                            oRegEx.Pattern = """attributes"":{""title"":""([^""]*)"""
+                            Set oTitle = oRegEx.Execute(sCurrentRecord)
+                            If oTitle.Count > 0 Then
+                                ExtractField = ExtractField & oTitle(0).Submatches(0)
+                            End If
+                        Case "recap"
+                            If InStr(1, ExtractField, sLoc) = 0 Then
+                                ExtractField = ExtractField & sLoc
+                            Else
+                                ExtractField = Left(ExtractField, Len(ExtractField) - 1)
+                            End If
+                        Case "recap_cgd"
+                            oRegEx.Pattern = "(?:""location_code"":""([^""]*)""[^}]*)?(?:""description"":""([^""]*)""[^}]*)?(?:""use_statement"":""([^""]*)""[^}]*)?""cgd"":""([^""]*)""[^}]*""collection_code"":""([^""]*)"""
+                            sCGD = ""
+                            Set oCGD = oRegEx.Execute(sCurrentRecord)
+                            sRecapLoc = ""
+                            For i = 0 To oCGD.Count - 1
+                                If oCGD(i).Submatches(0) <> "" Then
+                                    sRecapLoc = oCGD(i).Submatches(0)
+                                    sRecapLoc = Replace(sRecapLoc, "scsb", "")
+                                End If
+                                If sCGD <> "" Then
+                                    sCGD = sCGD & ChrW(166)
+                                End If
+                                sCGD = sCGD & sRecapLoc & "-" & oCGD(i).Submatches(4) & "-" & oCGD(i).Submatches(3)
+                                If oCGD(i).Submatches(2) <> "" Then
+                                    sCGD = sCGD & "-" & oCGD(i).Submatches(2)
+                                End If
+                                If oCGD(i).Submatches(1) <> "" Then
+                                    sCGD = sCGD & "-" & oCGD(i).Submatches(1)
+                                End If
+                            Next i
+                            ExtractField = ExtractField & sCGD
+                        Case Else
+                            ExtractField = "ERROR:InvalidRecap"
+                            Exit Function
+                    End Select
+                Next h
+            End If
         Next m
         Exit Function
     End If
