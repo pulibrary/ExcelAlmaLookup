@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{21984DD3-E559-408D-9048-746842264C80}{51E154D8-0B5F-4BB6-AA31-05F029AC534C}"
+Attribute VB_Base = "0{82D2B7AC-4C81-4EE6-8758-AA6543E70B4B}{39F76214-99FA-4FC1-962C-3797BD75891F}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -365,13 +365,19 @@ Private Sub OKButton_Click()
                             sResult = False
                         End If
 NextRow:
+                        If Trim(sResult) = "TRUE" Then
+                            sResult = True
+                        ElseIf Trim(sResult) = "FALSE" Then
+                            sResult = False
+                        End If
+                        
                         oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
                         oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = sResult
                     Next j
                 Else
                     For j = 0 To LookupDialog.ResultTypeList.ListCount - 1
                         oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).NumberFormat = "@"
-                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = "FALSE"
+                        oSourceRange.Cells(i, iResultColumn - iSourceColumn + 1 + j).Value = False
                     Next j
                 End If
                 If ActiveWorkbook.Name = Catalog.sFileName And ActiveSheet.Name = Catalog.sSheetName Then

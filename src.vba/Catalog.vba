@@ -440,7 +440,7 @@ Sub LoadSavedResultList()
     iMaxResults = GetSetting(sRegistryDir, "Results", "MAXRECS", 50)
     
     LookupDialog.MaxResultsBox.Value = iMaxResults
-    LookupDialog.IncludeExtrasCheckBox.Value = GetSetting(sRegistryDir, "Results", "IncludeExtras", False)
+    LookupDialog.IncludeExtrasCheckBox.Value = GetSetting(sRegistryDir, "Results", "IncludeExtras", "0") <> "0"
     On Error GoTo EndSub
     LookupDialog.ResultTypeCombo.Value = GetSetting(sRegistryDir, "Results", "RESULT000", "")
     
@@ -468,10 +468,10 @@ Sub LoadSavedSearchParams()
     End If
     On Error GoTo 0
     
-    LookupDialog.IgnoreHeaderCheckbox.Value = GetSetting(sRegistryDir, "Search", "_IgnoreHeader", True)
-    LookupDialog.GenerateHeaderCheckBox.Value = GetSetting(sRegistryDir, "Search", "_GenerateHeader", False)
-    LookupDialog.ValidateCheckBox.Value = GetSetting(sRegistryDir, "Search", "_ValidateISXN", True)
-    LookupDialog.IncludeSuppressed.Value = GetSetting(sRegistryDir, "Search", "_IncludeSuppressed", True)
+    LookupDialog.IgnoreHeaderCheckbox.Value = GetSetting(sRegistryDir, "Search", "_IgnoreHeader", "-1") <> "0"
+    LookupDialog.GenerateHeaderCheckBox.Value = GetSetting(sRegistryDir, "Search", "_GenerateHeader", "0") <> "0"
+    LookupDialog.ValidateCheckBox.Value = GetSetting(sRegistryDir, "Search", "_ValidateISXN", "-1") <> "0"
+    LookupDialog.IncludeSuppressed.Value = GetSetting(sRegistryDir, "Search", "_IncludeSuppressed", "-1") <> "0"
     
     iMax = GetSetting(sRegistryDir, "Search", "_Max", 0)
     
@@ -505,7 +505,7 @@ Sub SaveResultList()
     SaveSetting sRegistryDir, "Results", "MAX", iMax
     SaveSetting sRegistryDir, "Results", "MAXRECS", LookupDialog.MaxResultsBox.Value
     SaveSetting sRegistryDir, "Results", "RESULT000", LookupDialog.ResultTypeCombo.Value
-    SaveSetting sRegistryDir, "Results", "IncludeExtras", LookupDialog.IncludeExtrasCheckBox.Value
+    SaveSetting sRegistryDir, "Results", "IncludeExtras", CLng(LookupDialog.IncludeExtrasCheckBox.Value)
     For i = 1 To iMax
         SaveSetting sRegistryDir, "Results", "RESULT" & Format(i, "000"), LookupDialog.ResultTypeList.List(i - 1)
     Next i
@@ -530,10 +530,10 @@ Sub SaveSearchParams()
     
     SaveSetting sRegistryDir, "Search", "_Max", iCount
     
-    SaveSetting sRegistryDir, "Search", "_IgnoreHeader", LookupDialog.IgnoreHeaderCheckbox.Value
-    SaveSetting sRegistryDir, "Search", "_GenerateHeader", LookupDialog.GenerateHeaderCheckBox.Value
-    SaveSetting sRegistryDir, "Search", "_ValidateISXN", LookupDialog.ValidateCheckBox.Value
-    SaveSetting sRegistryDir, "Search", "_IncludeSuppressed", LookupDialog.IncludeSuppressed.Value
+    SaveSetting sRegistryDir, "Search", "_IgnoreHeader", CLng(LookupDialog.IgnoreHeaderCheckbox.Value)
+    SaveSetting sRegistryDir, "Search", "_GenerateHeader", CLng(LookupDialog.GenerateHeaderCheckBox.Value)
+    SaveSetting sRegistryDir, "Search", "_ValidateISXN", CLng(LookupDialog.ValidateCheckBox.Value)
+    SaveSetting sRegistryDir, "Search", "_IncludeSuppressed", CLng(LookupDialog.IncludeSuppressed.Value)
     
 End Sub
 
@@ -1264,7 +1264,8 @@ Function Z3950Search(sSource As String, sQuery1 As String, sSearchType As String
         sQuery = GetColumnContents(oQueryRow, sQuery)
         sQuery = Replace(sQuery, """", "\""")
         
-        If sQuery = "FALSE" Then
+
+        If sQuery = CStr(False) Or sQuery = "" Then
             sQuery = ""
         End If
     
@@ -1475,7 +1476,7 @@ Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
     If Not bAdvancedSearch Then
         Dim sSearchString As String
         sSearchString = GetColumnContents(oQueryRow, LookupDialog.SearchValueBox.Value)
-        If sSearchString = "FALSE" Or sSearchString = "" Then
+        If sSearchString = CStr(False) Or sSearchString = "" Then
             Lookup = ""
             Exit Function
         End If
@@ -2067,9 +2068,9 @@ Function ExtractField(sResultTypeAll As String, sResultXML As String, bHoldings 
         ExtractField = Replace(ExtractField, Chr(13), "")
     Else
         If sResultType = "exists" Then
-            ExtractField = "FALSE"
+            ExtractField = False
         Else
-            ExtractField = "TRUE"
+            ExtractField = True
         End If
     End If
     oRegEx.Pattern = "&[^; ]+;"
