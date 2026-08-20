@@ -26,7 +26,7 @@ Global oSourceRange As Object
 Public Const iTimeoutSecs = 5
 
 Public Const HKEY_CURRENT_USER = &H80000001
-Public Const sVersion = "v1.4.3"
+Public Const sVersion = "v1.4.4"
 Public Const sRepoURL = "https://github.com/pulibrary/ExcelAlmaLookup"
 Public Const sBlacklightURL = "https://catalog.princeton.edu/catalog.json?q="
 Public Const sLCCatURL = "http://lx2.loc.gov:210/LCDB"
@@ -1567,6 +1567,7 @@ Function Lookup(ByVal oQueryRow As Range, sCatalogURL As String) As String
                 sResponse = sAllRecords
             End If
             If bIsoholdEnabled Then
+                Debug.Print sHoldingsURL
                 .Open "GET", sHoldingsURL, True
                 If sAuth <> "" Then
                    .setRequestHeader "Authorization", "Basic " + sAuth

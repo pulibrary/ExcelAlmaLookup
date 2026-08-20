@@ -1,5 +1,5 @@
 Attribute VB_Name = "LookupDialog"
-Attribute VB_Base = "0{B10860DB-4FA1-4017-B9E4-13383D7896F4}{5E8AA779-96D5-4564-B7D9-0A04D182CF97}"
+Attribute VB_Base = "0{211781BD-FF86-472E-8494-52908CAD6C65}{A2F892AA-4A06-4BAE-8248-29660C81BE99}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -339,10 +339,27 @@ Private Sub OKButton_Click()
                             If stype = "Barcode" Then
                                 sResult = ExtractField(stype, CStr(sResultHold), True)
                             ElseIf stype = "Item Location" Or stype = "Item Enum/Chron" Or stype = "Shelf Locator" Then
-                                sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
+                                Dim sBarcode As String
                                 sBarcode = ""
-                                If sSearchType = "Barcode" Or sSearchType = "alma.barcode" Then
-                                    sResult = ExtractField(stype, CStr(sResultHold), True, sSearchString)
+                                
+                                If LookupDialog.SearchListBox.ListCount > 0 Then
+                                    For k = 0 To LookupDialog.SearchListBox.ListCount - 1
+                                        sTermIndex = LookupDialog.SearchListBox.List(k, 1)
+                                        sTermValue = LookupDialog.SearchListBox.List(k, 3)
+                                        If (sTermIndex = "Barcode" Or sTermIndex = "alma.barcode") Then
+                                            sBarcode = CStr(sTermValue)
+                                            sBarcode = Catalog.GetColumnContents(oSearchRow, sBarcode)
+                                        End If
+                                    Next k
+                                Else
+                                    sSearchType = CStr(LookupDialog.SearchFieldCombo.Value)
+                                    If (sSearchType = "Barcode" Or sSearchType = "alma.barcode") Then
+                                        sBarcode = CStr(LookupDialog.SearchValueBox.Value)
+                                        sBarcode = Catalog.GetColumnContents(oSearchRow, sBarcode)
+                                    End If
+                                End If
+                                If sBarcode <> "" Then
+                                    sResult = ExtractField(stype, CStr(sResultHold), True, sBarcode)
                                 Else
                                     sResult = ExtractField(stype, CStr(sResultHold), True)
                                 End If
