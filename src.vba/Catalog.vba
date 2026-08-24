@@ -906,7 +906,6 @@ End Function
 
 Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As String, bAdvancedSearch As Boolean, oQueryRow As Range) As String
     sURL = sBaseURL & "?operation=searchRetrieve&version=1.2&maximumRecords=" & iMaximumRecords & "&query="
-    
     iSearchTermsCount = 1
     If bAdvancedSearch Then
         iSearchTermsCount = LookupDialog.SearchListBox.ListCount
@@ -942,9 +941,6 @@ Function ConstructURL(sBaseURL As String, sQuery1 As String, sSearchType As Stri
         Dim sQuery As String
         sQuery = CStr(aSearchTerms(i, 3))
         sQuery = GetColumnContents(oQueryRow, sQuery)
-        sQuery = Replace(sQuery, "http://", "")
-        sQuery = Replace(sQuery, "-", " ")
-        sQuery = Replace(sQuery, "_", " ")
         If Trim(sQuery) = "" Then
             GoTo NextTerm
         End If
